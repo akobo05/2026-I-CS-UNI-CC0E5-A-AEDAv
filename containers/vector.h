@@ -76,6 +76,7 @@ istream& operator>>(istream& is, Vector<T>& v){
     char ch;
     T value;
     is >> ch; // lee '['
+    if((is >> ws).peek() == ']'){ is >> ch; return is; }
     while(is >> value){
         v.push_back(value);
         is >> ch; // lee ',' o ']'
