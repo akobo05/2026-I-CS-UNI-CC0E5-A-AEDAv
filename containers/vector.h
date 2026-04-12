@@ -71,9 +71,16 @@ ostream& operator<<(ostream& os, Vector<T>& v){
     return os << v.toString();
 }
 
-// TODO: Implementar como PR
 template <typename T>
 istream& operator>>(istream& is, Vector<T>& v){
+    char ch;
+    T value;
+    is >> ch; // lee '['
+    while(is >> value){
+        v.push_back(value);
+        is >> ch; // lee ',' o ']'
+        if(ch == ']') break;
+    }
     return is;
 }
 
