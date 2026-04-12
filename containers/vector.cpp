@@ -31,6 +31,13 @@ void DemoVector(){
     ofstream of("temp.txt");
     of << v1 << endl;
     of << v2 << endl;
-    // of.close();
-    
+    of.close();
+
+    // Probar operator>>
+    ifstream ifs("temp.txt");
+    Vector<T1> v3(10);
+    ifs >> v3;
+    cout << "Leido del archivo: " << v3 << endl;
+    ifs.close();
+
 }
