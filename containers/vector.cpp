@@ -40,4 +40,10 @@ void DemoVector(){
     cout << "Leido del archivo: " << v3 << endl;
     ifs.close();
 
+    // Probar vector vacio
+    istringstream empty("[]");
+    Vector<T1> v4(10);
+    empty >> v4;
+    cout << "Vector vacio size: " << v4.size() << endl;
+
 }
