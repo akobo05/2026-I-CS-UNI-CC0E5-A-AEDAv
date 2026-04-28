@@ -67,6 +67,14 @@ public:
     forward_iterator end()   { return forward_iterator(this, nullptr, true); }
 
     template <typename Func, typename... Args>
+    void ForEach(Func func, Args &&... args){
+        unique_lock<shared_mutex> lock(this->m_mtx);
+        if(this->m_size == 0) return;
+        for(auto& item : *this)
+            func(item, std::forward<Args>(args)...);
+    }
+
+    template <typename Func, typename... Args>
     void circularForEach(size_t vueltas, Func func, Args &&... args){
         unique_lock<shared_mutex> lock(this->m_mtx);
         if(!this->m_pRoot || vueltas == 0) return;
