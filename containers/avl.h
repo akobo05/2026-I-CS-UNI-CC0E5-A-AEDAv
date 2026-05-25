@@ -250,7 +250,7 @@ typename AVL<Trait>::Node* AVL<Trait>::internal_insert(Node *n, const value_type
         inserted = false;
         return n;
     }
-    int branch = less_v ? 0 : 1;
+    Index branch = less_v ? 0 : 1;
     n->m_pChild[branch] = internal_insert(n->m_pChild[branch], v, r, inserted);
     updateHeight(n);
 
