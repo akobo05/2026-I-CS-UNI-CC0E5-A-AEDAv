@@ -1,6 +1,8 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
+#include <thread>
+#include <vector>
 #include "avl.h"
 #include "hashtable.h"
 using namespace std;
@@ -53,6 +55,8 @@ void DemoAVL(){
     assert(!tr.remove(T1(99))); // inexistente
     cout << "DemoAVL remove OK: " << tr << "\n";
 }
+
+void DemoConcurrentHashTable();
 
 void DemoKVPair(){
     KVPair<T1, Type> a(5, 100);
@@ -125,4 +129,22 @@ void DemoHashTable(){
     assert(m_loaded.size() == 5);
     assert(m_loaded[T1(3)] == 300);
     cout << "DemoHashTable persistencia OK: " << m_loaded << "\n";
+
+    DemoConcurrentHashTable();
+}
+
+void DemoConcurrentHashTable(){
+    HashTable<DefaultHashTrait<T1, Type>> m;
+    auto worker = [&m](T1 base){
+        for(T1 i = 0; i < 1000; ++i){
+            T1 k = base * 1000 + i;
+            m[k] = Type(k);
+        }
+    };
+    std::vector<std::thread> ths;
+    for(T1 t = 0; t < 5; ++t) ths.emplace_back(worker, t);
+    for(auto &th : ths) th.join();
+    assert(m.size() == 5000);
+    cout << "DemoConcurrentHashTable size=" << m.size()
+         << " buckets=" << m.bucket_count() << " OK\n";
 }
