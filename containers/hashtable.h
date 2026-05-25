@@ -9,6 +9,7 @@
 #include <shared_mutex>
 #include <utility>
 #include <functional>
+#include <type_traits>
 #include "vector.h"
 #include "avl.h"
 #include "../types.h"
@@ -29,12 +30,18 @@ struct KVPair {
     }
 };
 
+// Knuth multiplicativo. Para tipos integrales usa el key directo;
+// para no integrales (string, etc.) delega en std::hash<K> y luego aplica Knuth.
 template <typename K>
 struct KnuthMultiplicativeHash {
     HashValue operator()(const K &key, BucketCount nBuckets) const {
-        HashValue h = HashValue(key) * 2654435761L;
-        if(h < 0) h = -h;
-        return h % nBuckets;
+        HashValue raw;
+        if constexpr (std::is_integral_v<K>)
+            raw = HashValue(key) * 2654435761L;
+        else
+            raw = HashValue(std::hash<K>{}(key)) * 2654435761L;
+        if(raw < 0) raw = -raw;
+        return raw % nBuckets;
     }
 };
 

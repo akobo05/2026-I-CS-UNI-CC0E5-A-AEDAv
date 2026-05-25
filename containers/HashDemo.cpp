@@ -130,6 +130,21 @@ void DemoHashTable(){
     assert(m_loaded[T1(3)] == 300);
     cout << "DemoHashTable persistencia OK: " << m_loaded << "\n";
 
+    // Key de tipo no integral (string) — Knuth se apoya en std::hash
+    HashTable<DefaultHashTrait<std::string, T1>> ms;
+    std::string k_hola = "hola";
+    std::string k_aeda = "aeda";
+    std::string k_unip = "uni";
+    ms[k_hola] = T1(1);
+    ms[k_aeda] = T1(3);
+    ms[k_unip] = T1(7);
+    ms[k_hola] = ms[k_hola] + T1(10);   // update via operator[]
+    assert(ms.size() == 3);
+    assert(ms[k_hola] == T1(11));
+    assert(ms.contains(k_aeda));
+    assert(!ms.contains(std::string("noexiste")));
+    cout << "DemoHashTable string-key OK: " << ms << "\n";
+
     DemoConcurrentHashTable();
 }
 
