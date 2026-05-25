@@ -4,11 +4,15 @@
 void ListsDemo();
 void DemoMinHeap();
 void DemoMaxHeap();
+void DemoAVL();
+void DemoHashTable();
 int main(){
     // DemoVector();
     //DemoConcurrentVector();
     ListsDemo();
     DemoMinHeap();
     DemoMaxHeap();
+    DemoAVL();
+    DemoHashTable();
     return 0;
 }
