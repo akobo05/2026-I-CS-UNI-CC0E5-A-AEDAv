@@ -53,6 +53,7 @@ private:
     Node* rotateLeft(Node *x);
     Node* rotateRight(Node *y);
     Node* internal_insert(Node *n, const value_type &v, Ref r, bool &inserted);
+    Node* internal_remove(Node *n, const value_type &v, bool &removed);
     Node* internal_find  (Node *n, const value_type &v) const;
     void  internal_clear (Node *n);
     template <typename F>
@@ -69,6 +70,7 @@ public:
     // API publica (toma su propio lock — uso standalone)
     bool insert(const value_type &v, Ref r);
     bool find  (const value_type &v, Ref &outRef) const;
+    bool remove(const value_type &v);
     Index size() const;
     bool  empty() const;
 
@@ -78,6 +80,7 @@ public:
     // API *_nolock: el caller debe sostener un lock externo (uso interno por HashTable).
     bool  insert_nolock(const value_type &v, Ref r);
     bool  find_nolock  (const value_type &v, Ref &outRef) const;
+    bool  remove_nolock(const value_type &v);
     Index size_nolock() const { return m_size; }
     template <typename F>
     void  inorder_nolock(F func) const;
@@ -303,6 +306,66 @@ template <typename Trait>
 bool AVL<Trait>::find(const value_type &v, Ref &outRef) const{
     shared_lock<shared_mutex> lock(m_mtx);
     return find_nolock(v, outRef);
+}
+
+template <typename Trait>
+typename AVL<Trait>::Node* AVL<Trait>::internal_remove(Node *n, const value_type &v, bool &removed){
+    if(!n){ removed = false; return nullptr; }
+    if(m_comp(v, n->m_data)){
+        n->m_pChild[0] = internal_remove(n->m_pChild[0], v, removed);
+    } else if(m_comp(n->m_data, v)){
+        n->m_pChild[1] = internal_remove(n->m_pChild[1], v, removed);
+    } else {
+        // encontrado
+        removed = true;
+        if(!n->m_pChild[0] || !n->m_pChild[1]){
+            Node *child = n->m_pChild[0] ? n->m_pChild[0] : n->m_pChild[1];
+            if(!child){ delete n; return nullptr; }
+            Node *tmp = child;
+            *n = *tmp;        // copia data, ref, height, children
+            delete tmp;
+        } else {
+            // dos hijos: sucesor inorder (minimo del subarbol derecho)
+            Node *succ = n->m_pChild[1];
+            while(succ->m_pChild[0]) succ = succ->m_pChild[0];
+            n->m_data = succ->m_data;
+            n->m_ref  = succ->m_ref;
+            bool dummy = false;
+            n->m_pChild[1] = internal_remove(n->m_pChild[1], succ->m_data, dummy);
+        }
+    }
+    if(!n) return n;
+    updateHeight(n);
+    long bal = balance(n);
+    // LL
+    if(bal > 1 && balance(n->m_pChild[0]) >= 0) return rotateRight(n);
+    // LR
+    if(bal > 1 && balance(n->m_pChild[0]) <  0){
+        n->m_pChild[0] = rotateLeft(n->m_pChild[0]);
+        return rotateRight(n);
+    }
+    // RR
+    if(bal < -1 && balance(n->m_pChild[1]) <= 0) return rotateLeft(n);
+    // RL
+    if(bal < -1 && balance(n->m_pChild[1]) >  0){
+        n->m_pChild[1] = rotateRight(n->m_pChild[1]);
+        return rotateLeft(n);
+    }
+    return n;
+}
+
+template <typename Trait>
+bool AVL<Trait>::remove_nolock(const value_type &v){
+    bool removed = false;
+    m_pRoot = internal_remove(m_pRoot, v, removed);
+    if(removed) --m_size;
+    return removed;
+}
+
+template <typename Trait>
+bool AVL<Trait>::remove(const value_type &v){
+    unique_lock<shared_mutex> lock(m_mtx);
+    return remove_nolock(v);
 }
 
 #endif // __AVL_H__

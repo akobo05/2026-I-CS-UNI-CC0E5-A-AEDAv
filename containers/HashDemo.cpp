@@ -34,6 +34,22 @@ void DemoAVL(){
     assert(t3.find(T1(5), out3));
     assert(out3 == 999);
     cout << "DemoAVL duplicado actualiza ref OK\n";
+
+    // Remove
+    AVL<AscendingAVLTrait<T1>> tr;
+    for(T1 i = 1; i <= 7; ++i) tr.insert(i, Ref(i * 10));
+    assert(tr.size() == 7);
+
+    assert(tr.remove(T1(4)));   // nodo interno
+    assert(tr.size() == 6);
+    Ref tmpRef;
+    assert(!tr.find(T1(4), tmpRef));
+
+    assert(tr.remove(T1(1)));   // hoja
+    assert(tr.size() == 5);
+
+    assert(!tr.remove(T1(99))); // inexistente
+    cout << "DemoAVL remove OK: " << tr << "\n";
 }
 
 // Placeholder — will be filled in Task 13+
