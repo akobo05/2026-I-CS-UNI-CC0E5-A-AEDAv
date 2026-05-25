@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <cassert>
 #include "avl.h"
 #include "hashtable.h"
@@ -98,4 +99,30 @@ void DemoHashTable(){
     assert(big.bucket_count() > initial_bc);
     cout << "DemoHashTable rehash OK (buckets " << initial_bc
          << " -> " << big.bucket_count() << ")\n";
+
+    // Range-for con structured binding (REQUISITO LITERAL)
+    HashTable<DefaultHashTrait<T1, Type>> m_iter;
+    for(T1 i = 0; i < 5; ++i) m_iter[i] = Type(i * 100);
+    Index count_iter = 0;
+    Type  sum = 0;
+    for(const auto& [key, value] : m_iter){
+        ++count_iter;
+        sum = sum + value;
+        (void)key;
+    }
+    assert(count_iter == 5);
+    assert(sum == Type(0 + 100 + 200 + 300 + 400));
+    cout << "DemoHashTable range-for OK (count=" << count_iter << ", sum=" << sum << ")\n";
+
+    // Persistencia
+    ofstream out("HashTable.txt");
+    out << m_iter;
+    out.close();
+    HashTable<DefaultHashTrait<T1, Type>> m_loaded;
+    ifstream in("HashTable.txt");
+    in >> m_loaded;
+    in.close();
+    assert(m_loaded.size() == 5);
+    assert(m_loaded[T1(3)] == 300);
+    cout << "DemoHashTable persistencia OK: " << m_loaded << "\n";
 }

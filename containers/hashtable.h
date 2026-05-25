@@ -92,6 +92,83 @@ public:
     Index       size() const;
     bool        empty() const;
     BucketCount bucket_count() const;
+
+    class iterator {
+    public:
+        HashTable *m_owner;
+        Index m_bucket;
+        typename bucket_type::iterator m_inner;
+
+        iterator() : m_owner(nullptr), m_bucket(0) {}
+        iterator(HashTable *owner, Index bucket, typename bucket_type::iterator inner)
+            : m_owner(owner), m_bucket(bucket), m_inner(inner) {}
+
+        void advance_to_next_nonempty(){
+            BucketCount nb = m_owner->m_buckets.size();
+            while(m_bucket < nb){
+                bucket_type &b = m_owner->m_buckets[m_bucket];
+                if(m_inner != b.end_nolock()) return;
+                ++m_bucket;
+                if(m_bucket < nb)
+                    m_inner = m_owner->m_buckets[m_bucket].begin_nolock();
+            }
+            m_inner = typename bucket_type::iterator();
+        }
+        iterator& operator++(){
+            ++m_inner;
+            advance_to_next_nonempty();
+            return *this;
+        }
+        kv_type& operator*()  { return (*m_inner).m_data; }
+        kv_type* operator->() { return &(*m_inner).m_data; }
+        bool operator==(const iterator &o) const {
+            return m_owner == o.m_owner && m_bucket == o.m_bucket && m_inner == o.m_inner;
+        }
+        bool operator!=(const iterator &o) const { return !(*this == o); }
+    };
+
+    iterator begin() {
+        shared_lock<shared_mutex> lock(m_mtx);
+        if(m_buckets.size() == 0) return iterator(this, 0, typename bucket_type::iterator());
+        iterator it(this, 0, m_buckets[0].begin_nolock());
+        it.advance_to_next_nonempty();
+        return it;
+    }
+    iterator end() {
+        shared_lock<shared_mutex> lock(m_mtx);
+        return iterator(this, m_buckets.size(), typename bucket_type::iterator());
+    }
+
+    friend std::ostream& operator<<(std::ostream &os, const HashTable &t){
+        shared_lock<shared_mutex> lock(t.m_mtx);
+        os << "[";
+        bool first = true;
+        for(BucketCount i = 0; i < t.m_buckets.size(); ++i){
+            const bucket_type &b = t.m_buckets[i];
+            b.inorder_nolock([&](const typename bucket_type::Node &n){
+                if(!first) os << ",";
+                os << "(" << n.m_data.first << "," << n.m_data.second << ")";
+                first = false;
+            });
+        }
+        os << "]";
+        return os;
+    }
+
+    friend std::istream& operator>>(std::istream &is, HashTable &t){
+        char ch;
+        if(!(is >> ch) || ch != '['){ is.clear(ios_base::failbit); return is; }
+        key_type k; value_type v; char comma, parenClose;
+        while(is >> ch && ch != ']'){
+            if(ch == '('){
+                if(is >> k >> comma >> v >> parenClose){
+                    if(comma == ',' && parenClose == ')')
+                        t[k] = v;
+                }
+            }
+        }
+        return is;
+    }
 };
 
 template <typename Trait>
