@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cassert>
 #include "avl.h"
+#include "hashtable.h"
 using namespace std;
 
 void DemoAVL(){
@@ -52,5 +53,49 @@ void DemoAVL(){
     cout << "DemoAVL remove OK: " << tr << "\n";
 }
 
-// Placeholder — will be filled in Task 13+
-void DemoHashTable(){}
+void DemoKVPair(){
+    KVPair<T1, Type> a(5, 100);
+    KVPair<T1, Type> b(7, 200);
+    KVPair<T1, Type> c(5, 999);
+    assert(a < b);
+    assert(!(a < c));
+    assert(a == c);
+    KnuthMultiplicativeHash<T1> h;
+    HashValue idx = h(T1(42), BucketCount(16));
+    assert(idx >= 0 && idx < 16);
+    cout << "DemoKVPair OK (hash de 42 mod 16 = " << idx << ")\n";
+}
+
+void DemoHashTable(){
+    DemoKVPair();
+
+    HashTable<DefaultHashTrait<T1, Type>> m;
+    T1 k1 = 5; Type v1 = 3;
+    m[k1] = v1;
+    assert(m.size() == 1);
+    assert(m[k1] == 3);
+    T1 k2 = 17; Type v2 = 42;
+    m[k2] = v2;
+    assert(m.size() == 2);
+    assert(m.contains(k2));
+    assert(!m.contains(T1(99)));
+    cout << "DemoHashTable basico OK (size=" << m.size() << ")\n";
+
+    // copy + move ctors
+    HashTable<DefaultHashTrait<T1, Type>> m_copy(m);
+    assert(m_copy.size() == 2);
+    assert(m_copy[T1(5)] == 3);
+    HashTable<DefaultHashTrait<T1, Type>> m_moved(std::move(m_copy));
+    assert(m_moved.size() == 2);
+    assert(m_copy.size() == 0);
+    cout << "DemoHashTable copy+move OK\n";
+
+    // rehash con muchos inserts
+    HashTable<DefaultHashTrait<T1, Type>> big;
+    BucketCount initial_bc = big.bucket_count();
+    for(T1 i = 0; i < 100; ++i) big[i] = Type(i * 10);
+    assert(big.size() == 100);
+    assert(big.bucket_count() > initial_bc);
+    cout << "DemoHashTable rehash OK (buckets " << initial_bc
+         << " -> " << big.bucket_count() << ")\n";
+}

@@ -84,6 +84,8 @@ public:
     Index size_nolock() const { return m_size; }
     template <typename F>
     void  inorder_nolock(F func) const;
+    template <typename F>
+    void  inorder_nolock(F func);
 
     // Iterator in-order (sin lock interno — para uso bajo lock externo)
     class iterator {
@@ -366,6 +368,18 @@ template <typename Trait>
 bool AVL<Trait>::remove(const value_type &v){
     unique_lock<shared_mutex> lock(m_mtx);
     return remove_nolock(v);
+}
+
+template <typename Trait>
+template <typename F>
+void AVL<Trait>::inorder_nolock(F func){
+    std::function<void(Node*)> walk = [&](Node *n){
+        if(!n) return;
+        walk(n->m_pChild[0]);
+        func(*n);
+        walk(n->m_pChild[1]);
+    };
+    walk(m_pRoot);
 }
 
 #endif // __AVL_H__
