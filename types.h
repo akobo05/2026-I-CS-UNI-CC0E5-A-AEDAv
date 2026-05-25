@@ -14,4 +14,8 @@ using T1 = int;
 
 using Ref = long;
 
+using Index       = long;   // posiciones e indices en contenedores
+using BucketCount = long;   // cantidad de buckets en HashTable
+using HashValue   = long;   // resultado de hash function
+
 #endif // __TYPES_H__
