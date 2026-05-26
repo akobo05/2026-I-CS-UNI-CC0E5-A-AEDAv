@@ -224,8 +224,7 @@ CircularDoubleLinkedList<Trait>::CircularDoubleLinkedList(CircularDoubleLinkedLi
 template <typename Trait>
 CircularDoubleLinkedList<Trait>& CircularDoubleLinkedList<Trait>::operator=(const CircularDoubleLinkedList &other){
     if(this == &other) return *this;
-    unique_lock<shared_mutex> lk_this(this->m_mtx);
-    shared_lock<shared_mutex> lk_other(other.m_mtx);
+    std::scoped_lock lock(this->m_mtx, other.m_mtx);
     internal_clear_cdll();
     if(!other.m_pRoot) return *this;
     Node* curr = other.m_pRoot;
@@ -239,8 +238,7 @@ CircularDoubleLinkedList<Trait>& CircularDoubleLinkedList<Trait>::operator=(cons
 template <typename Trait>
 CircularDoubleLinkedList<Trait>& CircularDoubleLinkedList<Trait>::operator=(CircularDoubleLinkedList &&other) noexcept{
     if(this == &other) return *this;
-    unique_lock<shared_mutex> lk_this(this->m_mtx);
-    unique_lock<shared_mutex> lk_other(other.m_mtx);
+    std::scoped_lock lock(this->m_mtx, other.m_mtx);
     internal_clear_cdll();
     this->m_pRoot = std::exchange(other.m_pRoot, nullptr);
     this->m_tail  = std::exchange(other.m_tail,  nullptr);

@@ -219,8 +219,7 @@ HashTable<Trait>& HashTable<Trait>::operator=(const HashTable &other){
 template <typename Trait>
 HashTable<Trait>& HashTable<Trait>::operator=(HashTable &&other) noexcept{
     if(this == &other) return *this;
-    unique_lock<shared_mutex> lk_this(m_mtx);
-    unique_lock<shared_mutex> lk_other(other.m_mtx);
+    std::scoped_lock lock(m_mtx, other.m_mtx);
     m_buckets = std::move(other.m_buckets);
     m_count   = std::exchange(other.m_count, 0);
     return *this;

@@ -191,8 +191,7 @@ LinkedList<Trait>::LinkedList(LinkedList &&other) noexcept{
 template <typename Trait>
 LinkedList<Trait>& LinkedList<Trait>::operator=(const LinkedList &other){
     if(this == &other) return *this;
-    unique_lock<shared_mutex> lk_this(m_mtx);
-    shared_lock<shared_mutex> lk_other(other.m_mtx);
+    std::scoped_lock lock(m_mtx, other.m_mtx);
     internal_clear();
     for(Node* curr = other.m_pRoot; curr; curr = curr->getNext())
         internal_push_back(curr->getData(), curr->getRef());
@@ -202,8 +201,7 @@ LinkedList<Trait>& LinkedList<Trait>::operator=(const LinkedList &other){
 template <typename Trait>
 LinkedList<Trait>& LinkedList<Trait>::operator=(LinkedList &&other) noexcept{
     if(this == &other) return *this;
-    unique_lock<shared_mutex> lk_this(m_mtx);
-    unique_lock<shared_mutex> lk_other(other.m_mtx);
+    std::scoped_lock lock(m_mtx, other.m_mtx);
     internal_clear();
     m_pRoot = std::exchange(other.m_pRoot, nullptr);
     m_tail  = std::exchange(other.m_tail,  nullptr);
