@@ -44,11 +44,11 @@ public:
     VectorNode() : m_data(T()), m_ref(Ref()) {}
     VectorNode(T data, Ref ref) : m_data(data), m_ref(ref) {}
     VectorNode(const VectorNode &other) : m_data(other.m_data), m_ref(other.m_ref) {}
-    VectorNode(VectorNode &&other) : m_data(std::move(other.m_data)), m_ref(std::move(other.m_ref)) {}
+    VectorNode(VectorNode &&other) noexcept : m_data(std::move(other.m_data)), m_ref(std::move(other.m_ref)) {}
     VectorNode& operator=(const VectorNode &other) {
         m_data = other.m_data; m_ref = other.m_ref; return *this;
     }
-    VectorNode& operator=(VectorNode &&other) {
+    VectorNode& operator=(VectorNode &&other) noexcept {
         m_data = std::move(other.m_data); m_ref = std::move(other.m_ref); return *this;
     }
     T    getData() const  { return m_data; }
@@ -167,8 +167,7 @@ Vector<Trait>::Vector(Vector &&other) noexcept
 template <typename Trait>
 Vector<Trait>& Vector<Trait>::operator=(const Vector &other){
     if(this == &other) return *this;
-    unique_lock<shared_mutex> lk_this(m_mtx);
-    shared_lock<shared_mutex> lk_other(other.m_mtx);
+    std::scoped_lock lock(m_mtx, other.m_mtx);
     internal_clear();
     m_capacity = other.m_capacity;
     m_data = new Node[m_capacity];
@@ -180,8 +179,7 @@ Vector<Trait>& Vector<Trait>::operator=(const Vector &other){
 template <typename Trait>
 Vector<Trait>& Vector<Trait>::operator=(Vector &&other) noexcept{
     if(this == &other) return *this;
-    unique_lock<shared_mutex> lk_this(m_mtx);
-    unique_lock<shared_mutex> lk_other(other.m_mtx);
+    std::scoped_lock lock(m_mtx, other.m_mtx);
     internal_clear();
     m_capacity = std::exchange(other.m_capacity, 0);
     m_size     = std::exchange(other.m_size, 0);
