@@ -17,5 +17,6 @@ using Ref = long;
 using Index       = long;   // posiciones e indices en contenedores
 using BucketCount = long;   // cantidad de buckets en HashTable
 using HashValue   = long;   // resultado de hash function
+using Depth       = long;   // profundidad/altura de arbol (AVL, BinaryTree)
 
 #endif // __TYPES_H__

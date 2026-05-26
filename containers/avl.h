@@ -21,7 +21,7 @@ struct AVLNode {
     T   m_data;
     Ref m_ref;
     AVLNode *m_pChild[2];   // 0=left, 1=right
-    long m_height;
+    Depth m_height;
     AVLNode() : m_data(T()), m_ref(Ref()), m_pChild{nullptr,nullptr}, m_height(1) {}
     AVLNode(T d, Ref r) : m_data(d), m_ref(r), m_pChild{nullptr,nullptr}, m_height(1) {}
 };
@@ -43,11 +43,11 @@ private:
     Comp  m_comp;
     mutable shared_mutex m_mtx;
 
-    long  height(Node *n) const { return n ? n->m_height : 0; }
-    long  balance(Node *n) const { return n ? height(n->m_pChild[0]) - height(n->m_pChild[1]) : 0; }
+    Depth height(Node *n) const { return n ? n->m_height : 0; }
+    Depth balance(Node *n) const { return n ? height(n->m_pChild[0]) - height(n->m_pChild[1]) : 0; }
     void  updateHeight(Node *n){
-        long lh = height(n->m_pChild[0]);
-        long rh = height(n->m_pChild[1]);
+        Depth lh = height(n->m_pChild[0]);
+        Depth rh = height(n->m_pChild[1]);
         n->m_height = 1 + (lh > rh ? lh : rh);
     }
     Node* rotateLeft(Node *x);
@@ -144,8 +144,7 @@ AVL<Trait>::AVL(AVL &&other) noexcept : m_pRoot(nullptr), m_size(0) {
 template <typename Trait>
 AVL<Trait>& AVL<Trait>::operator=(const AVL &other){
     if(this == &other) return *this;
-    unique_lock<shared_mutex> lk_this(m_mtx);
-    shared_lock<shared_mutex> lk_other(other.m_mtx);
+    std::scoped_lock lock(m_mtx, other.m_mtx);
     internal_clear(m_pRoot); m_pRoot = nullptr; m_size = 0;
     other.internal_inorder(other.m_pRoot, [this](const Node &n){
         bool ins = false;
@@ -158,8 +157,7 @@ AVL<Trait>& AVL<Trait>::operator=(const AVL &other){
 template <typename Trait>
 AVL<Trait>& AVL<Trait>::operator=(AVL &&other) noexcept{
     if(this == &other) return *this;
-    unique_lock<shared_mutex> lk_this(m_mtx);
-    unique_lock<shared_mutex> lk_other(other.m_mtx);
+    std::scoped_lock lock(m_mtx, other.m_mtx);
     internal_clear(m_pRoot);
     m_pRoot = std::exchange(other.m_pRoot, nullptr);
     m_size  = std::exchange(other.m_size, 0);
@@ -254,7 +252,7 @@ typename AVL<Trait>::Node* AVL<Trait>::internal_insert(Node *n, const value_type
     n->m_pChild[branch] = internal_insert(n->m_pChild[branch], v, r, inserted);
     updateHeight(n);
 
-    long bal = balance(n);
+    Depth bal = balance(n);
     // LL
     if(bal > 1 && m_comp(v, n->m_pChild[0]->m_data))
         return rotateRight(n);
@@ -338,7 +336,7 @@ typename AVL<Trait>::Node* AVL<Trait>::internal_remove(Node *n, const value_type
     }
     if(!n) return n;
     updateHeight(n);
-    long bal = balance(n);
+    Depth bal = balance(n);
     // LL
     if(bal > 1 && balance(n->m_pChild[0]) >= 0) return rotateRight(n);
     // LR
