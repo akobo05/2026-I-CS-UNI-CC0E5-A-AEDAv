@@ -45,13 +45,20 @@ struct KnuthMultiplicativeHash {
     }
 };
 
+// La resolucion de colisiones es una POLITICA (Policy-Based Design):
+// hash(key) -> indice de bucket; las colisiones (varias keys al mismo bucket)
+// se resuelven dentro de bucket_type. Aqui el bucket es un AVL ordenado por key
+// (busqueda O(log n) intra-bucket), pero bucket_type puede ser CUALQUIER estructura
+// que cumpla la interfaz de bucket: insert_nolock, find_nolock, remove_nolock,
+// inorder_nolock (const y no-const), begin_nolock/end_nolock, size_nolock.
+// Cambiando solo esta linea el bucket pasa a ser lista, otro hash, etc.
 template <typename K, typename V>
 struct DefaultHashTrait {
     using key_type    = K;
     using value_type  = V;
     using kv_type     = KVPair<K, V>;
     using hash_fn     = KnuthMultiplicativeHash<K>;
-    using bucket_type = AVL<AscendingAVLTrait<kv_type>>;
+    using bucket_type = AVL<AscendingAVLTrait<kv_type>>;  // <- politica intercambiable
     static constexpr BucketCount initial_buckets       = 16;
     static constexpr long        load_factor_max_x100  = 75;
     static constexpr BucketCount growth_factor          = 2;
