@@ -116,12 +116,13 @@ bool Heap<Trait>::isEmpty() const{
 
 template <typename Trait>
 void Heap<Trait>::heapifyUp(Index i){
+    auto& self = *this;
     while(i > 0){
         Index parent = (i - 1) / 2;
-        value_type child_v  = (*this)[i];
-        value_type parent_v = (*this)[parent];
+        value_type child_v  = self[i];
+        value_type parent_v = self[parent];
         if(m_comp(child_v, parent_v)){
-            this->swap(i, parent);
+            self.swap(i, parent);
             i = parent;
         } else {
             break;
@@ -137,34 +138,37 @@ void Heap<Trait>::insert(value_type v, Ref r){
 
 template <typename Trait>
 typename Heap<Trait>::value_type Heap<Trait>::peek() const{
-    if(this->size() == 0) throw out_of_range("Heap::peek vacio");
-    return (*this)[0];
+    auto& self = *this;
+    if(self.size() == 0) throw out_of_range("Heap::peek vacio");
+    return self[0];
 }
 
 template <typename Trait>
 void Heap<Trait>::heapifyDown(Index i){
-    Index n = this->size();
+    auto& self = *this;
+    Index n = self.size();
     while(true){
         Index left  = 2 * i + 1;
         Index right = 2 * i + 2;
         Index best  = i;
-        if(left  < n && m_comp((*this)[left],  (*this)[best])) best = left;
-        if(right < n && m_comp((*this)[right], (*this)[best])) best = right;
+        if(left  < n && m_comp(self[left],  self[best])) best = left;
+        if(right < n && m_comp(self[right], self[best])) best = right;
         if(best == i) break;
-        this->swap(i, best);
+        self.swap(i, best);
         i = best;
     }
 }
 
 template <typename Trait>
 std::tuple<typename Heap<Trait>::value_type, Ref> Heap<Trait>::extract(){
-    if(this->size() == 0) throw out_of_range("Heap::extract vacio");
-    value_type top_v = (*this)[0];
-    Ref        top_r = this->refAt(0);
-    Index      last  = this->size() - 1;
-    this->swap(0, last);
+    auto& self = *this;
+    if(self.size() == 0) throw out_of_range("Heap::extract vacio");
+    value_type top_v = self[0];
+    Ref        top_r = self.refAt(0);
+    Index      last  = self.size() - 1;
+    self.swap(0, last);
     Base::pop_back();
-    if(this->size() > 0) heapifyDown(0);
+    if(self.size() > 0) heapifyDown(0);
     return {top_v, top_r};
 }
 
