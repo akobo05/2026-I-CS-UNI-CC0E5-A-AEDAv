@@ -72,7 +72,7 @@ void DemoHashTable(){
     cout << "\n========== HashTable (contiene un AVL que hereda de BinaryTree) - Criterios ==========\n";
 
     // [operator[]] : auto-insert y sobrescritura
-    HashTable<T1, Type> m;
+    HashTable<HashTrait<T1, Type>> m;
     m[T1(5)]  = Type(3);
     m[T1(17)] = Type(42);
     m[T1(5)]  = Type(100);              // misma key: sobrescribe, no inserta
@@ -86,7 +86,7 @@ void DemoHashTable(){
     assert(!m.contains(T1(99)));
 
     // [for (const auto& [key, value] : m)]
-    HashTable<T1, Type> mr;
+    HashTable<HashTrait<T1, Type>> mr;
     for(T1 i = 0; i < 5; ++i) mr[i] = Type(i * 100);
     cout << "\n[for (const auto& [key, value] : m)]\n";
     Index count = 0; Type sum = 0;
@@ -105,7 +105,7 @@ void DemoHashTable(){
     cout << "\n[operator>>]  (reaprovechado del AVL contenido)\n";
     stringstream ss;
     ss << mr;
-    HashTable<T1, Type> mr2;
+    HashTable<HashTrait<T1, Type>> mr2;
     ss >> mr2;
     cout << "  serializado  : " << mr  << "\n";
     cout << "  deserializado: " << mr2 << "\n";
@@ -115,7 +115,7 @@ void DemoHashTable(){
 
     // [Copy constructor]  (reaprovecha la copia del AVL contenido)
     cout << "\n[Copy constructor]  (reaprovecha la copia del AVL contenido)\n";
-    HashTable<T1, Type> mcopy(mr);
+    HashTable<HashTrait<T1, Type>> mcopy(mr);
     mcopy[T1(99)] = Type(999);          // modifico solo la copia
     cout << "  original (sin 99): size=" << mr.size()    << "  " << mr    << "\n";
     cout << "  copia    (con 99): size=" << mcopy.size() << "  " << mcopy << "\n";
@@ -126,7 +126,7 @@ void DemoHashTable(){
 
     // [Move constructor]  (reaprovecha el move del AVL contenido)
     cout << "\n[Move constructor]  (reaprovecha el move del AVL contenido)\n";
-    HashTable<T1, Type> mmoved(std::move(mcopy));
+    HashTable<HashTrait<T1, Type>> mmoved(std::move(mcopy));
     cout << "  movida          : size=" << mmoved.size() << "\n";
     cout << "  fuente tras move: size=" << mcopy.size()  << "   (esperado 0)\n";
     assert(mmoved.size() == 6);
@@ -136,7 +136,7 @@ void DemoHashTable(){
     cout << "\n---------- Extras ----------\n";
 
     // Claves string (el AVL ordena por la clave; KVPair compara strings)
-    HashTable<std::string, T1> ms;
+    HashTable<HashTrait<std::string, T1>> ms;
     ms[std::string("hola")] = T1(1);
     ms[std::string("aeda")] = T1(3);
     ms[std::string("uni")]  = T1(7);
@@ -149,7 +149,7 @@ void DemoHashTable(){
 }
 
 void DemoConcurrentHashTable(){
-    HashTable<T1, Type> m;
+    HashTable<HashTrait<T1, Type>> m;
     auto worker = [&m](T1 base){
         for(T1 i = 0; i < 1000; ++i){
             T1 k = base * 1000 + i;

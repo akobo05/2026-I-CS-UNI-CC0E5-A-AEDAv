@@ -4,6 +4,7 @@
 #include <iostream>
 #include <istream>
 #include <ostream>
+#include <string>
 #include <stack>
 #include <stdexcept>
 #include <mutex>
@@ -175,26 +176,26 @@ public:
     iterator begin() const { return iterator(m_pRoot); }
     iterator end()   const { return iterator(); }
 
+    // Serializacion con delimitadores como TOKENS (std::string), no char:
+    // formato espaciado "{ ( <dato> , <ref> ) ... }". Asi cada delimitador se lee
+    // con operator>> de string (seguro para simbolos multibyte), sin usar char.
     friend std::ostream& operator<<(std::ostream &os, const BinaryTree &t){
         shared_lock<shared_mutex> lk(t.m_mtx);
         os << "{";
-        bool first = true;
         t.internal_inorder(t.m_pRoot, [&](const Node &n){
-            if(!first) os << ",";
-            os << "(" << n.m_data << "," << n.m_ref << ")";
-            first = false;
+            os << " ( " << n.m_data << " , " << n.m_ref << " )";
         });
-        os << "}";
+        os << " }";
         return os;
     }
     friend std::istream& operator>>(std::istream &is, BinaryTree &t){
-        char ch;
-        if(!(is >> ch) || ch != '{'){ is.clear(ios_base::failbit); return is; }
-        value_type v; Ref r; char comma, close;
-        while(is >> ch && ch != '}'){
-            if(ch == '('){
+        string tok;
+        if(!(is >> tok) || tok != "{"){ is.clear(ios_base::failbit); return is; }
+        while(is >> tok && tok != "}"){
+            if(tok == "("){
+                value_type v; Ref r; string comma, close;
                 if(is >> v >> comma >> r >> close)
-                    if(comma == ',' && close == ')')
+                    if(comma == "," && close == ")")
                         t.insert(v, r);   // virtual insert -> AVL rebalancea
             }
         }
