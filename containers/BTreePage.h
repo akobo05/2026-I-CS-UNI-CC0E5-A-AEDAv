@@ -205,7 +205,6 @@ public:
     ~BTreePage() { reset(); }
 
     Size keyCount() const { return m_keyCount; }
-    Size locateForTest(const value_type& key) const { return locate(key); }
 
     bt_ErrorCode insert(const value_type& key, Ref ref) {
         Size pos = locate(key);
@@ -224,9 +223,6 @@ public:
         }
         return isOverflow() ? bt_ErrorCode::overflow : bt_ErrorCode::ok;
     }
-
-    void setMaxKeysForChildsForTest(Size o) { setMaxKeysForChilds(o); }
-    void splitRootForTest() { splitRoot(); }
 
     Flag search(const value_type& key, value_type& outValue, Ref& outRef) {
         Size pos = locate(key);
