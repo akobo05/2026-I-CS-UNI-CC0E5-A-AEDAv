@@ -201,6 +201,21 @@ public:
 
     void setMaxKeysForChildsForTest(Size o) { setMaxKeysForChilds(o); }
     void splitRootForTest() { splitRoot(); }
+
+    Flag search(const value_type& key, value_type& outValue, Ref& outRef) {
+        Size pos = locate(key);
+        if (pos >= m_keyCount)
+            return m_subPages[pos] ? m_subPages[pos]->search(key, outValue, outRef) : false;
+        if (m_keys[pos].m_data == key) {
+            outValue = m_keys[pos].m_data;
+            outRef   = m_keys[pos].m_ref;
+            m_keys[pos].touch();
+            return true;
+        }
+        if (key < m_keys[pos].m_data && m_subPages[pos])
+            return m_subPages[pos]->search(key, outValue, outRef);
+        return false;
+    }
 };
 
 #endif // __BTREEPAGE_H__
