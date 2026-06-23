@@ -95,6 +95,82 @@ private:
     void destroy() { reset(); delete this; }
     void setMaxKeysForChilds(Size order) { m_maxKeysForChilds = order; }
 
+    Size freeCells()    const { return m_maxKeys - m_keyCount; }
+    Flag isFull()       const { return m_keyCount >= m_maxKeys; }
+    Flag isOverflow()   const { return m_keyCount >  m_maxKeys; }
+    Size minKeys()      const { return 2 * m_maxKeys / 3; }
+    Flag isUnderflow()  const { return m_keyCount <  minKeys(); }
+    Flag isRoot()       const { return m_maxKeysForChilds != m_maxKeys; }
+    Size freeCellsOnLeft (Size pos) const { return pos > 0          ? m_subPages[pos-1]->freeCells() : 0; }
+    Size freeCellsOnRight(Size pos) const { return pos < m_keyCount ? m_subPages[pos+1]->freeCells() : 0; }
+
+    Flag redistribute1(Size&) { return false; }   // STUB temporal; versión real en Task 7
+
+    void movePage(Page* child, std::vector<Entry>& tmpKeys, std::vector<Page*>& tmpSub) {
+        Size n = child->m_keyCount, i = 0;
+        for (; i < n; ++i) { tmpKeys.push_back(child->m_keys[i]); tmpSub.push_back(child->m_subPages[i]); }
+        tmpSub.push_back(child->m_subPages[i]);
+        child->clearKeys();
+    }
+
+    void splitInto3(std::vector<Entry>& tmpKeys, std::vector<Page*>& tmpSub,
+                    Page*& c1, Page*& c2, Page*& c3, Entry& e1, Entry& e2) {
+        if (!c1) c1 = new Page(m_maxKeysForChilds, m_unique);
+        c1->clearKeys();
+        Size nKeys = (tmpKeys.size() - 2) / 3, i = 0;
+        for (; i < nKeys; ++i) { c1->m_keys[i] = tmpKeys[i]; c1->m_subPages[i] = tmpSub[i]; ++c1->m_keyCount; }
+        c1->m_subPages[i] = tmpSub[i];
+        e1 = tmpKeys[i++];
+
+        if (!c2) c2 = new Page(m_maxKeysForChilds, m_unique);
+        c2->clearKeys();
+        nKeys += (tmpKeys.size() - 2) / 3 + 1;
+        Size j = 0;
+        for (; i < nKeys; ++i, ++j) { c2->m_keys[j] = tmpKeys[i]; c2->m_subPages[j] = tmpSub[i]; ++c2->m_keyCount; }
+        c2->m_subPages[j] = tmpSub[i];
+        e2 = tmpKeys[i++];
+
+        if (!c3) c3 = new Page(m_maxKeysForChilds, m_unique);
+        c3->clearKeys();
+        nKeys = tmpKeys.size();
+        for (j = 0; i < nKeys; ++i, ++j) { c3->m_keys[j] = tmpKeys[i]; c3->m_subPages[j] = tmpSub[i]; ++c3->m_keyCount; }
+        c3->m_subPages[j] = tmpSub[i];
+    }
+
+    void splitChild(Size pos) {
+        Page *c1 = nullptr, *c2 = nullptr;
+        if (pos > 0 && m_subPages[pos-1]->isFull()) { c1 = m_subPages[pos-1]; c2 = m_subPages[pos--]; }
+        if (pos < m_keyCount && m_subPages[pos+1]->isFull()) { c1 = m_subPages[pos]; c2 = m_subPages[pos+1]; }
+        if (!c1) {   // fallback cuando redistribute1 está en stub y ningún hermano está lleno
+            if (pos < m_keyCount) { c1 = m_subPages[pos]; c2 = m_subPages[pos + 1]; }
+            else                  { c2 = m_subPages[pos]; c1 = m_subPages[--pos]; }
+        }
+
+        std::vector<Entry> tmpKeys; std::vector<Page*> tmpSub;
+        movePage(c1, tmpKeys, tmpSub);
+        tmpKeys.push_back(m_keys[pos]);
+        movePage(c2, tmpKeys, tmpSub);
+
+        Page* c3 = nullptr; Entry e1, e2;
+        splitInto3(tmpKeys, tmpSub, c1, c2, c3, e1, e2);
+
+        m_keys[pos] = e1; m_subPages[pos] = c1;
+        insertAt(m_keys, e2, pos + 1);
+        insertAt(m_subPages, c2, pos + 1);
+        ++m_keyCount;
+        m_subPages[pos + 2] = c3;
+    }
+
+    Flag splitRoot() {
+        Page *c1 = nullptr, *c2 = nullptr, *c3 = nullptr; Entry e1, e2;
+        splitInto3(m_keys, m_subPages, c1, c2, c3, e1, e2);
+        clearKeys();
+        m_keys[0] = e1; m_subPages[0] = c1; ++m_keyCount;
+        m_keys[1] = e2; m_subPages[1] = c2; ++m_keyCount;
+        m_subPages[2] = c3;
+        return true;
+    }
+
 public:
     BTreePage(Size maxKeys, Flag unique = true)
         : m_keyCount(0), m_maxKeys(maxKeys), m_maxKeysForChilds(maxKeys), m_unique(unique) {
@@ -104,6 +180,27 @@ public:
 
     Size keyCount() const { return m_keyCount; }
     Size locateForTest(const value_type& key) const { return locate(key); }
+
+    bt_ErrorCode insert(const value_type& key, Ref ref) {
+        Size pos = locate(key);
+        if (pos < m_keyCount && m_keys[pos].m_data == key && m_unique)
+            return bt_ErrorCode::duplicate;
+        if (!m_subPages[pos]) {                       // hoja
+            insertAt(m_keys, Entry(key, ref), pos);
+            ++m_keyCount;
+            return isOverflow() ? bt_ErrorCode::overflow : bt_ErrorCode::ok;
+        }
+        auto error = m_subPages[pos]->insert(key, ref);
+        if (error == bt_ErrorCode::duplicate) return bt_ErrorCode::duplicate;
+        if (error == bt_ErrorCode::overflow) {
+            if (!redistribute1(pos)) splitChild(pos);
+            return isOverflow() ? bt_ErrorCode::overflow : bt_ErrorCode::ok;
+        }
+        return isOverflow() ? bt_ErrorCode::overflow : bt_ErrorCode::ok;
+    }
+
+    void setMaxKeysForChildsForTest(Size o) { setMaxKeysForChilds(o); }
+    void splitRootForTest() { splitRoot(); }
 };
 
 #endif // __BTREEPAGE_H__
