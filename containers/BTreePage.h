@@ -58,16 +58,20 @@ private:
     Size m_maxKeysForChilds;
     Flag m_unique;
 
+    // Comparaciones derivadas del comparador del Trait (m_comp da "menor que").
+    Flag eq(const value_type& a, const value_type& b) const { return !m_comp(a, b) && !m_comp(b, a); }
+    Flag lt(const value_type& a, const value_type& b) const { return m_comp(a, b); }
+
     // Búsqueda binaria: devuelve la posición de la clave o donde debería ir.
     Size locate(const value_type& key) const {
         Size first = 0, last = m_keyCount;
         while (first < last) {
             Size mid = (first + last) / 2;
-            if (key == m_keys[mid].m_data) return mid;
-            if (key >  m_keys[mid].m_data) first = mid + 1;
-            else                           last  = mid;
+            if (eq(key, m_keys[mid].m_data)) return mid;
+            if (lt(m_keys[mid].m_data, key)) first = mid + 1;
+            else                             last  = mid;
         }
-        if (first < m_keyCount && key <= m_keys[first].m_data) return first;
+        if (first < m_keyCount && !lt(m_keys[first].m_data, key)) return first;  // key <= keys[first]
         return last;
     }
 
@@ -205,7 +209,7 @@ public:
 
     bt_ErrorCode insert(const value_type& key, Ref ref) {
         Size pos = locate(key);
-        if (pos < m_keyCount && m_keys[pos].m_data == key && m_unique)
+        if (pos < m_keyCount && eq(key, m_keys[pos].m_data) && m_unique)
             return bt_ErrorCode::duplicate;
         if (!m_subPages[pos]) {                       // hoja
             insertAt(m_keys, Entry(key, ref), pos);
@@ -228,13 +232,13 @@ public:
         Size pos = locate(key);
         if (pos >= m_keyCount)
             return m_subPages[pos] ? m_subPages[pos]->search(key, outValue, outRef) : false;
-        if (m_keys[pos].m_data == key) {
+        if (eq(key, m_keys[pos].m_data)) {
             outValue = m_keys[pos].m_data;
             outRef   = m_keys[pos].m_ref;
             m_keys[pos].touch();
             return true;
         }
-        if (key < m_keys[pos].m_data && m_subPages[pos])
+        if (lt(key, m_keys[pos].m_data) && m_subPages[pos])
             return m_subPages[pos]->search(key, outValue, outRef);
         return false;
     }
@@ -244,7 +248,7 @@ public:
     Flag removeIfSafe(const value_type& key, Entry& out) {
         Size pos = locate(key);
         Flag leaf = (m_subPages[0] == nullptr);
-        if (pos < m_keyCount && m_keys[pos].m_data == key) {
+        if (pos < m_keyCount && eq(key, m_keys[pos].m_data)) {
             if (!leaf) return false;                                  // nodo interno -> rebuild
             if (!isRoot() && m_keyCount - 1 < minKeys()) return false; // haría underflow -> rebuild
             out = m_keys[pos];
@@ -258,10 +262,10 @@ public:
 
     // Recorrido inorder, un solo template para CUALQUIER aridad de args extra.
     template <typename Func, typename... Args>
-    void forEach(Level level, Func func, Args&&... args) const {
+    void forEach(Level level, Func func, Args&&... args) {
         for (Size i = 0; i < m_keyCount; ++i) {
             if (m_subPages[i]) m_subPages[i]->forEach(level + 1, func, std::forward<Args>(args)...);
-            func(const_cast<Entry&>(m_keys[i]), level, std::forward<Args>(args)...);
+            func(m_keys[i], level, std::forward<Args>(args)...);
         }
         if (m_subPages[m_keyCount]) m_subPages[m_keyCount]->forEach(level + 1, func, std::forward<Args>(args)...);
     }
