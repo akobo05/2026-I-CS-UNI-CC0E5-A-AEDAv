@@ -9,7 +9,7 @@
 
 template <typename Trait> class BTree;
 
-enum class bt_ErrorCode { ok, overflow, underflow, duplicate, notFound, rootMerged };
+enum class bt_ErrorCode { ok, overflow, duplicate };
 
 // Entry: dato + referencia + contador de accesos. Serializa con tokens (no char).
 template <typename Value>

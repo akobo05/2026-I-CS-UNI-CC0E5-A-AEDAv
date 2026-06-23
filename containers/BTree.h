@@ -103,9 +103,18 @@ public:
             return {out.m_data, out.m_ref};
         }
         // Fallback robusto: reconstruir reusando insert (verificado).
+        // La equivalencia se decide con el MISMO comparador del Trait (no operator==),
+        // para que rebuild y removeIfSafe/search coincidan; se descarta solo la primera.
         std::vector<Entry> keep;
-        m_pRoot->forEach(0, [&](Entry& e, Level){ if (!(e.m_data == key)) keep.push_back(e); });
-        delete m_pRoot;
+        Comp comp{};
+        Flag removedOne = false;
+        m_pRoot->forEach(0, [&](Entry& e, Level){
+            Flag same = !comp(e.m_data, key) && !comp(key, e.m_data);
+            if (same && !removedOne) { removedOne = true; return; }
+            keep.push_back(e);
+        });
+        // value_type/Ref son nothrow-copiables aqui, asi que reconstruir es seguro.
+        delete m_pRoot; m_pRoot = nullptr;            // evita puntero colgante si 'new' lanzara
         m_pRoot = new Page(2 * Order + 1, m_unique);
         m_pRoot->setMaxKeysForChilds(Order);
         m_height = 1; m_numKeys = 0;
