@@ -24,9 +24,6 @@ struct BTreeEntry {
 
     Size touch()          { return ++m_useCount; }
     Size useCount() const { return m_useCount; }
-    Flag operator< (const BTreeEntry& o) const { return m_data <  o.m_data; }
-    Flag operator> (const BTreeEntry& o) const { return m_data >  o.m_data; }
-    Flag operator==(const BTreeEntry& o) const { return m_data == o.m_data; }
 
     // Delimitador " : " leído como token std::string (multibyte-safe)
     friend std::ostream& operator<<(std::ostream& os, const BTreeEntry& e) {
