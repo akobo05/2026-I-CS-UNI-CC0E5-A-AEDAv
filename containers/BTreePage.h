@@ -58,6 +58,29 @@ private:
     Size m_maxKeysForChilds;
     Flag m_unique;
 
+    // Búsqueda binaria: devuelve la posición de la clave o donde debería ir.
+    Size locate(const value_type& key) const {
+        Size first = 0, last = m_keyCount;
+        while (first < last) {
+            Size mid = (first + last) / 2;
+            if (key == m_keys[mid].m_data) return mid;
+            if (key >  m_keys[mid].m_data) first = mid + 1;
+            else                           last  = mid;
+        }
+        if (first < m_keyCount && key <= m_keys[first].m_data) return first;
+        return last;
+    }
+
+    template <typename Container, typename Item>
+    static void insertAt(Container& c, const Item& item, Size pos) {
+        for (Size i = c.size() - 1; i > pos; --i) c[i] = c[i - 1];
+        c[pos] = item;
+    }
+    template <typename Container>
+    static void removeAt(Container& c, Size pos) {
+        for (Size i = pos + 1; i < c.size(); ++i) c[i - 1] = c[i];
+    }
+
     void create() {
         m_keys.assign(m_maxKeys + 1, Entry{});
         m_subPages.assign(m_maxKeys + 2, nullptr);
@@ -80,6 +103,7 @@ public:
     ~BTreePage() { reset(); }
 
     Size keyCount() const { return m_keyCount; }
+    Size locateForTest(const value_type& key) const { return locate(key); }
 };
 
 #endif // __BTREEPAGE_H__
