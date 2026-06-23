@@ -40,6 +40,15 @@ private:
         return dst;
     }
 
+    // Inserta asumiendo que el lock ya está tomado. Devuelve false si era duplicado.
+    Flag insertRaw(const value_type& key, Ref ref) {
+        auto error = m_pRoot->insert(key, ref);
+        if (error == bt_ErrorCode::duplicate) return false;
+        ++m_numKeys;
+        if (error == bt_ErrorCode::overflow) { m_pRoot->splitRoot(); ++m_height; }
+        return true;
+    }
+
 public:
     explicit BTree(Flag unique = true)
         : m_pRoot(new Page(2 * Order + 1, unique)), m_height(1), m_unique(unique), m_numKeys(0) {
@@ -80,20 +89,28 @@ public:
 
     Flag insert(const value_type& key, Ref ref) {
         std::unique_lock<std::shared_mutex> lk(m_mtx);
-        auto error = m_pRoot->insert(key, ref);
-        if (error == bt_ErrorCode::duplicate) return false;
-        ++m_numKeys;
-        if (error == bt_ErrorCode::overflow) { m_pRoot->splitRoot(); ++m_height; }
-        return true;
+        return insertRaw(key, ref);
     }
     std::tuple<value_type, Ref> remove(const value_type& key) {
         std::unique_lock<std::shared_mutex> lk(m_mtx);
-        value_type outValue{}; Ref outRef{};
-        auto error = m_pRoot->remove(key, outValue, outRef);
-        if (error == bt_ErrorCode::notFound) throw std::runtime_error("BTree::remove - clave no encontrada");
-        --m_numKeys;
-        if (error == bt_ErrorCode::rootMerged) --m_height;
-        return {outValue, outRef};
+        value_type v{}; Ref r{};
+        if (!m_pRoot->search(key, v, r))
+            throw std::runtime_error("BTree::remove - clave no encontrada");
+        // Fast-path: hoja sin underflow.
+        Entry out{};
+        if (m_pRoot->removeIfSafe(key, out)) {
+            --m_numKeys;
+            return {out.m_data, out.m_ref};
+        }
+        // Fallback robusto: reconstruir reusando insert (verificado).
+        std::vector<Entry> keep;
+        m_pRoot->forEach(0, [&](Entry& e, Level){ if (!(e.m_data == key)) keep.push_back(e); });
+        delete m_pRoot;
+        m_pRoot = new Page(2 * Order + 1, m_unique);
+        m_pRoot->setMaxKeysForChilds(Order);
+        m_height = 1; m_numKeys = 0;
+        for (const auto& e : keep) insertRaw(e.m_data, e.m_ref);
+        return {v, r};
     }
     std::tuple<value_type, Ref> search(const value_type& key) const {
         std::shared_lock<std::shared_mutex> lk(m_mtx);

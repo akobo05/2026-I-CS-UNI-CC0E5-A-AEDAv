@@ -92,14 +92,12 @@ private:
         m_subPages.assign(m_subPages.size(), nullptr);
         clearKeys();
     }
-    void destroy() { reset(); delete this; }
     void setMaxKeysForChilds(Size order) { m_maxKeysForChilds = order; }
 
     Size freeCells()    const { return m_maxKeys - m_keyCount; }
     Flag isFull()       const { return m_keyCount >= m_maxKeys; }
     Flag isOverflow()   const { return m_keyCount >  m_maxKeys; }
     Size minKeys()      const { return 2 * m_maxKeys / 3; }
-    Flag isUnderflow()  const { return m_keyCount <  minKeys(); }
     Flag isRoot()       const { return m_maxKeysForChilds != m_maxKeys; }
     Size freeCellsOnLeft (Size pos) const { return pos > 0          ? m_subPages[pos-1]->freeCells() : 0; }
     Size freeCellsOnRight(Size pos) const { return pos < m_keyCount ? m_subPages[pos+1]->freeCells() : 0; }
@@ -125,77 +123,13 @@ private:
             --src->m_keyCount;
         }
     }
+    // Solo se usa en la ruta de INSERT (el hijo desbordó). Intenta redistribuir
+    // hacia un hermano con espacio; si no hay, devuelve false -> splitChild.
     Flag redistribute1(Size& pos) {
-        if (m_subPages[pos]->isUnderflow()) {
-            Size nkLeft  = pos > 0          ? m_subPages[pos-1]->m_keyCount : 0;
-            Size nkRight = pos < m_keyCount ? m_subPages[pos+1]->m_keyCount : 0;
-            if (nkLeft > nkRight) {
-                if (m_subPages[pos-1]->m_keyCount > m_subPages[pos-1]->minKeys()) redistributeL2R(pos - 1);
-                else if (pos == m_keyCount) { --pos; return false; }
-                else return false;
-            } else {
-                if (m_subPages[pos+1]->m_keyCount > m_subPages[pos+1]->minKeys()) redistributeR2L(pos + 1);
-                else if (pos == 0) { ++pos; return false; }
-                else return false;
-            }
-        } else {
-            Size fcLeft = freeCellsOnLeft(pos), fcRight = freeCellsOnRight(pos);
-            if (!fcLeft && !fcRight && m_subPages[pos]->isFull()) return false;
-            if (fcLeft > fcRight) redistributeR2L(pos); else redistributeL2R(pos);
-        }
+        Size fcLeft = freeCellsOnLeft(pos), fcRight = freeCellsOnRight(pos);
+        if (!fcLeft && !fcRight && m_subPages[pos]->isFull()) return false;
+        if (fcLeft > fcRight) redistributeR2L(pos); else redistributeL2R(pos);
         return true;
-    }
-    Flag redistribute2(Size pos) {
-        if (m_subPages[pos-1]->isUnderflow()) {
-            redistributeR2L(pos + 1); redistributeR2L(pos);
-            if (m_subPages[pos-1]->isUnderflow()) return false;
-        } else if (m_subPages[pos+1]->isUnderflow()) {
-            redistributeL2R(pos - 1); redistributeL2R(pos);
-            if (m_subPages[pos+1]->isUnderflow()) return false;
-        } else {
-            redistributeL2R(pos - 1); redistributeR2L(pos + 1);
-            if (m_subPages[pos]->isUnderflow()) return false;
-        }
-        return true;
-    }
-    Flag treatUnderflow(Size& pos) { return redistribute1(pos) || redistribute2(pos); }
-
-    Entry& firstEntry() { return m_subPages[0] ? m_subPages[0]->firstEntry() : m_keys[0]; }
-
-    bt_ErrorCode mergePages(Size pos) {
-        std::vector<Entry> tmpKeys; std::vector<Page*> tmpSub;
-        Page *c1 = m_subPages[pos-1], *c2 = m_subPages[pos], *c3 = m_subPages[pos+1];
-        movePage(c1, tmpKeys, tmpSub); tmpKeys.push_back(m_keys[pos-1]);
-        movePage(c2, tmpKeys, tmpSub); tmpKeys.push_back(m_keys[pos]);
-        movePage(c3, tmpKeys, tmpSub);
-        c3->destroy();
-        Size nKeys = c1->freeCells(), i = 0;
-        for (; i < nKeys; ++i) { c1->m_keys[i] = tmpKeys[i]; c1->m_subPages[i] = tmpSub[i]; ++c1->m_keyCount; }
-        c1->m_subPages[i] = tmpSub[i];
-        m_keys[pos-1] = tmpKeys[i]; m_subPages[pos-1] = c1;
-        removeAt(m_keys, pos); removeAt(m_subPages, pos);
-        --m_keyCount;
-        nKeys = c2->freeCells();
-        Size j = ++i;
-        for (i = 0; i < nKeys; ++i, ++j) { c2->m_keys[i] = tmpKeys[j]; c2->m_subPages[i] = tmpSub[j]; ++c2->m_keyCount; }
-        c2->m_subPages[i] = tmpSub[j];
-        m_subPages[pos] = c2;
-        return isUnderflow() ? bt_ErrorCode::underflow : bt_ErrorCode::ok;
-    }
-    bt_ErrorCode mergeRoot() {
-        Size pos = 1;
-        Page *c1 = m_subPages[pos-1], *c2 = m_subPages[pos], *c3 = m_subPages[pos+1];
-        Size nKeys = c1->m_keyCount + c2->m_keyCount + c3->m_keyCount + 2;
-        std::vector<Entry> tmpKeys; std::vector<Page*> tmpSub;
-        movePage(c1, tmpKeys, tmpSub); tmpKeys.push_back(m_keys[pos-1]);
-        movePage(c2, tmpKeys, tmpSub); tmpKeys.push_back(m_keys[pos]);
-        movePage(c3, tmpKeys, tmpSub);
-        clearKeys();
-        Size i = 0;
-        for (; i < nKeys; ++i) { m_keys[i] = tmpKeys[i]; m_subPages[i] = tmpSub[i]; ++m_keyCount; }
-        m_subPages[i] = tmpSub[i];
-        c1->destroy(); c2->destroy(); c3->destroy();
-        return bt_ErrorCode::rootMerged;
     }
 
     void movePage(Page* child, std::vector<Entry>& tmpKeys, std::vector<Page*>& tmpSub) {
@@ -305,31 +239,21 @@ public:
         return false;
     }
 
-    bt_ErrorCode remove(const value_type& key, value_type& outValue, Ref& outRef) {
-        bt_ErrorCode error = bt_ErrorCode::ok;
+    // Fast-path de borrado: SOLO borra si la clave está en una hoja que no caerá
+    // en underflow (o en la raíz). Devuelve false sin mutar si requiere rebuild.
+    Flag removeIfSafe(const value_type& key, Entry& out) {
         Size pos = locate(key);
+        Flag leaf = (m_subPages[0] == nullptr);
         if (pos < m_keyCount && m_keys[pos].m_data == key) {
-            outValue = m_keys[pos].m_data; outRef = m_keys[pos].m_ref;
-            if (!m_subPages[pos + 1]) {                          // hoja
-                removeAt(m_keys, pos); --m_keyCount;
-                return isUnderflow() ? bt_ErrorCode::underflow : bt_ErrorCode::ok;
-            }
-            Entry& rightFirst = m_subPages[pos + 1]->firstEntry();  // sucesor inorder
-            std::swap(m_keys[pos], rightFirst);
-            value_type discard{}; Ref discardRef{};
-            error = m_subPages[++pos]->remove(key, discard, discardRef);
-        } else if (pos == m_keyCount) {
-            error = m_subPages[pos]->remove(key, outValue, outRef);
-        } else if (key <= m_keys[pos].m_data) {
-            if (m_subPages[pos]) error = m_subPages[pos]->remove(key, outValue, outRef);
-            else return bt_ErrorCode::notFound;
+            if (!leaf) return false;                                  // nodo interno -> rebuild
+            if (!isRoot() && m_keyCount - 1 < minKeys()) return false; // haría underflow -> rebuild
+            out = m_keys[pos];
+            removeAt(m_keys, pos); --m_keyCount;
+            return true;
         }
-        if (error == bt_ErrorCode::underflow) {
-            if (treatUnderflow(pos)) return bt_ErrorCode::ok;
-            if (isRoot() && m_keyCount == 2) return mergeRoot();
-            return mergePages(pos);
-        }
-        return error;
+        if (leaf) return false;                                       // no está aquí -> rebuild lo maneja
+        Page* c = m_subPages[pos];
+        return c ? c->removeIfSafe(key, out) : false;
     }
 
     // Recorrido inorder, un solo template para CUALQUIER aridad de args extra.
