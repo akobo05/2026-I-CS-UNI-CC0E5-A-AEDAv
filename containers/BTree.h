@@ -136,6 +136,48 @@ public:
     };
     Iterator begin() const { return Iterator(m_pRoot); }
     Iterator end()   const { return Iterator(); }
+
+    // Variádicos: delegan en la raíz bajo UN shared_lock (recorrido atómico)
+    template <typename Func, typename... Args>
+    void forEach(Func func, Args&&... args) const {
+        std::shared_lock<std::shared_mutex> lk(m_mtx);
+        m_pRoot->forEach(0, func, std::forward<Args>(args)...);
+    }
+    template <typename Func, typename... Args>
+    Entry* firstThat(Func func, Args&&... args) {
+        std::unique_lock<std::shared_mutex> lk(m_mtx);   // devuelve Entry* mutable -> lock exclusivo
+        return m_pRoot->firstThat(0, func, std::forward<Args>(args)...);
+    }
+    template <typename Func, typename... Args>
+    void forEachPage(Func func, Args&&... args) const {
+        std::shared_lock<std::shared_mutex> lk(m_mtx);
+        m_pRoot->forEachPage(0, func, std::forward<Args>(args)...);
+    }
+
+    std::string toString() const {
+        std::ostringstream os; os << *this; return os.str();
+    }
+
+    // V3: delimitadores como TOKENS std::string. Formato: "{ ( <data> , <ref> ) ... }"
+    friend std::ostream& operator<<(std::ostream& os, const BTree& t) {
+        os << "{";
+        t.forEach([&os](Entry& e, Level){ os << " ( " << e.m_data << " , " << e.m_ref << " )"; });
+        os << " }";
+        return os;
+    }
+    friend std::istream& operator>>(std::istream& is, BTree& t) {
+        std::string tok;
+        if (!(is >> tok) || tok != "{") { is.clear(std::ios_base::failbit); return is; }
+        while (is >> tok && tok != "}") {
+            if (tok == "(") {
+                value_type v; Ref r; std::string comma, close;
+                if (is >> v >> comma >> r >> close)
+                    if (comma == "," && close == ")")
+                        t.insert(v, r);
+            }
+        }
+        return is;
+    }
 };
 
 #endif // __BTREE_H__
