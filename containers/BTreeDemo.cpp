@@ -1,113 +1,65 @@
-//#include <iostream.h>
-#include <time.h>
-#include <stdlib.h>
+#include <iostream>
 #include <string>
-#include "BTree.h"
+#include <cctype>
+#include <cassert>
+#include "../types.h"
+#include "traits.h"
+#include "BTree.h"        // PascalCase: compila en Linux
+#include "DemoUtils.h"
 
-//const char * keys="CDAMPIWNBKEHOLJYQZFXVRTSGU";
-const char * keys1 = "D1XJ2xTg8zKL9AhijOPQcEowRSp0NbW567BUfCqrs4FdtYZakHIuvGV3eMylmn";
-const char * keys2 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-const char * keys3 = "DYZakHIUwxVJ203ejOP9Qc8AdtuEop1XvTRghSNbW567BfiCqrs4FGMyzKLlmn";
+void DemoBTree() {
+    using Trait = Tree34Trait<TypeBTree>;
+    using BT    = BTree<Trait>;
+    using Entry = BT::Entry;
+    printHeader("BTREE (orden 3 / std::string)");
 
-const int BTreeSize = 3;
-void main(int argc, char * argv[], char * envp[])
-{
-       int result, i;
-       BTree <char> bt (BTreeSize);
-       for (i = 0; keys1[i]; i++)
-       {
-               //cout<<"Inserting "<<keys1[i]<<endl;
-               result = bt.Insert(keys1[i], i*i);
-               //bt.Print(cout);
-       }
-       bt.Print(cout);
-       /*for (i = 0; keys2[i]; i++)
-       {
-               cout << "Searching " << keys2[i] << " ";
-               long ObjID = bt.Search(keys2[i]);
-               if( ObjID != -1 )
-                       cout << "Achei " << keys2[i] << " ID = " << ObjID << endl;
-               else
-                       cout <<"Nao achei!" << keys2[i] << endl;
-       }*/
-       /*cout.flush();
+    BT bt;
+    const std::string ks = "D1XJ2xTg8zKL9AhijOPQcEowRSp0NbW567BUfCqrs4FdtYZakHIuvGV3eMylmn";
+    Size n = 0;
+    for (char c : ks) if (bt.insert(std::string(1, c), (Ref)(n * n))) ++n;
+    printSection("insert");
+    std::cout << "  size=" << bt.size() << "  height=" << bt.height() << "  order=" << bt.order() << "\n";
 
-       for (i = 0; keys3[i]; i++)
-       {
-               cout << "Removing " << keys3[i] << " ";
-               if( bt.Remove(keys3[i], -1) )
-                       cout << keys3[i] << " removido !" << endl;
-               else
-                       cout <<"Nao achei!" << keys3[i] << endl;
-               bt.Print(cout);
-       }
-       bt.Print(cout);
-       cout.flush();*/
-       return 1;
+    printSection("search");
+    try { auto [v, r] = bt.search("Z"); std::cout << "  search('Z') -> valor=" << v << " ref=" << r << "\n"; }
+    catch (const std::exception& e) { std::cout << "  " << e.what() << "\n"; }
+    try { bt.search("!"); } catch (const std::exception& e) { std::cout << "  search('!') -> " << e.what() << "\n"; }
+
+    printSection("forEach variadic (1 arg extra)");
+    Size letras = 0;
+    bt.forEach([](Entry& e, Level, Size& cnt){ if (!e.m_data.empty() && std::isalpha((unsigned char)e.m_data[0])) ++cnt; }, letras);
+    std::cout << "  letras en el arbol: " << letras << "\n";
+
+    printSection("firstThat variadic (1 arg extra)");
+    if (Entry* hit = bt.firstThat([](Entry& e, Level, const std::string& t){ return e.m_data == t; }, std::string("M")))
+        std::cout << "  firstThat('M') -> ref=" << hit->m_ref << "\n";
+
+    printSection("remove");
+    Size before = bt.size();
+    auto [rv, rr] = bt.remove("A");
+    std::cout << "  remove('A') -> valor=" << rv << " ref=" << rr << "  size " << before << " -> " << bt.size() << "\n";
+
+    printSection("iterador inorder (range-for)");
+    std::cout << "  claves: ";
+    for (auto& e : bt) std::cout << e.m_data;
+    std::cout << "\n";
+
+    printSection("useCount");
+    bt.search("B"); bt.search("B");
+    if (Entry* b = bt.firstThat([](Entry& e, Level, const std::string& t){ return e.m_data == t; }, std::string("B")))
+        std::cout << "  'B' useCount=" << b->useCount() << "\n";
+
+    testIO(bt);                                            // operator<< / >> reutilizados
+    testCopyMove(bt, [](BT& c){ c.insert("!", 999); });    // copy/move reutilizados
+
+    printSection("Traits: arbol 2-3 con el MISMO motor");
+    BTree<Tree23Trait<TypeBTree>> bt23;
+    for (char c : std::string("MDFABZCEG")) bt23.insert(std::string(1, c), (Ref)c);
+    std::cout << "  bt23 size=" << bt23.size() << "  order=" << bt23.order() << "  " << bt23 << "\n";
+
+    testConcurrency(bt, [](BT& t, int id){
+        for (int i = 0; i < 200; ++i) t.insert("k" + std::to_string(i), (Ref)id);
+    }, 5, bt.size() + 200, "size");
+
+    printFooter("BTREE");
 }
-
-
-
-
-
-
-
-
-
-/*const char * keys="CDAMPIWNBKEHOLJYQZFXVRTSGU";
-const char * keys2="CDAMPIWNBKEHOLJYQZFXVRTSGU";
-const int BTreeSize = 3;
-main (int argc, char * argv)
-{
-       //__int64 li;
-       BTree <__int64> bt (BTreeSize);
-       for (register int i = 0; i < 1000000; i++)
-       {
-               //cout<<"Inserting "<<keys[i]<<endl;
-               bt.Insert(i, i-1);
-               //bt.Print(cout);
-       }
-
-       for (i = 0; i < 1000; i++)
-       {
-               __int64 key = 975000+(::rand()%50000);
-               //cout << "Searching " << (long)key << " ";
-               long ObjID = bt.Search(key);
-               if( ObjID != -1 )
-                       cout << "Achei " << (long)key << " ID = " << ObjID << endl;
-               else
-                       cout <<"  Nao achei!" << (long)key << endl;
-       }
-       cout.flush();
-
-       return 1;
-}*/
-
-
-
-/*const int BTreeSize = 3;
-main (int argc, char * argv)
-{
-       int result, i;
-       BTree <LONGLONG> bt(BTreeSize);
-       result = bt.Create ("ernesto3-string-btree-start.dat",ios::in|ios::out);
-       if (!result) { cout<<"Please delete testbt.dat"<<endl;return 0; }
-       srand( (unsigned)time( NULL ) );
-       LARGE_INTEGER key;
-       for (i = 0; i < 1000000; i++)
-       {
-               //cout<<"Inserting "<<keys[i]<<endl;
-               char strTmp[50];
-               key.LowPart = rand();
-               key.HighPart = rand();
-               std::string str(strTmp);
-               result = bt.Insert(key.QuadPart, i);
-               //bt.Print(cout);
-               if( i % 100000 == 0 )
-               {       cout << i << endl; cout.flush();        }
-       }
-       //cout << "Searching D " << bt.Search();
-       //bt.Search(1,1);
-       cout.flush();
-       return 1;
-}*/
