@@ -9,6 +9,7 @@
 #include <shared_mutex>
 #include <mutex>
 #include <utility>
+#include <vector>
 #include "../types.h"
 #include "traits.h"
 #include "BTreePage.h"
@@ -109,6 +110,32 @@ public:
     Level height() const { std::shared_lock<std::shared_mutex> lk(m_mtx); return m_height; }
     Size  order()  const { return Order; }
     Flag  empty()  const { return size() == 0; }
+
+    class Iterator {
+        std::vector<std::pair<Page*, Size>> m_stack;
+        void pushPath(Page* page, Size idx) {
+            while (page && page->m_keyCount > 0) {
+                m_stack.push_back({page, idx});
+                page = page->m_subPages[idx];
+                idx = 0;
+            }
+        }
+    public:
+        Iterator() = default;
+        explicit Iterator(Page* root) { pushPath(root, 0); }
+        Entry& operator*() const { return m_stack.back().first->m_keys[m_stack.back().second]; }
+        Iterator& operator++() {
+            auto [page, idx] = m_stack.back();
+            m_stack.pop_back();
+            if (idx + 1 < page->m_keyCount) m_stack.push_back({page, idx + 1});
+            if (Page* right = page->m_subPages[idx + 1]) pushPath(right, 0);
+            return *this;
+        }
+        Flag operator==(const Iterator& o) const { return m_stack == o.m_stack; }
+        Flag operator!=(const Iterator& o) const { return !(*this == o); }
+    };
+    Iterator begin() const { return Iterator(m_pRoot); }
+    Iterator end()   const { return Iterator(); }
 };
 
 #endif // __BTREE_H__
