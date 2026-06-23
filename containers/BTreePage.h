@@ -331,6 +331,35 @@ public:
         }
         return error;
     }
+
+    // Recorrido inorder, un solo template para CUALQUIER aridad de args extra.
+    template <typename Func, typename... Args>
+    void forEach(Level level, Func func, Args&&... args) const {
+        for (Size i = 0; i < m_keyCount; ++i) {
+            if (m_subPages[i]) m_subPages[i]->forEach(level + 1, func, std::forward<Args>(args)...);
+            func(const_cast<Entry&>(m_keys[i]), level, std::forward<Args>(args)...);
+        }
+        if (m_subPages[m_keyCount]) m_subPages[m_keyCount]->forEach(level + 1, func, std::forward<Args>(args)...);
+    }
+    template <typename Func, typename... Args>
+    Entry* firstThat(Level level, Func func, Args&&... args) {
+        for (Size i = 0; i < m_keyCount; ++i) {
+            if (m_subPages[i])
+                if (Entry* found = m_subPages[i]->firstThat(level + 1, func, std::forward<Args>(args)...))
+                    return found;
+            if (func(m_keys[i], level, std::forward<Args>(args)...)) return &m_keys[i];
+        }
+        if (m_subPages[m_keyCount])
+            return m_subPages[m_keyCount]->firstThat(level + 1, func, std::forward<Args>(args)...);
+        return nullptr;
+    }
+    // Recorre PÁGINAS (para validar invariantes de orden): pasa keyCount, no Entry.
+    template <typename Func, typename... Args>
+    void forEachPage(Level level, Func func, Args&&... args) const {
+        func(m_keyCount, level, std::forward<Args>(args)...);
+        for (Size i = 0; i <= m_keyCount; ++i)
+            if (m_subPages[i]) m_subPages[i]->forEachPage(level + 1, func, std::forward<Args>(args)...);
+    }
 };
 
 #endif // __BTREEPAGE_H__
