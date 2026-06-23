@@ -14,4 +14,13 @@ using T1 = int;
 
 using Ref = long;
 
+#include <cstddef>   // std::size_t
+#include <string>    // std::string
+
+using Size      = std::size_t;   // conteos / índices no negativos
+using Level     = std::size_t;   // profundidad en recorridos
+using Flag      = bool;          // resultados booleanos
+using TypeBTree = std::string;   // value_type por defecto del demo (multibyte-safe)
+
 #endif // __TYPES_H__
+
