@@ -257,7 +257,7 @@ bool CBTreePage<Trait>::Redistribute1(int &pos)
                                RedistributeL2R(pos-1); // bring elements from left brother
                        else
                                if( pos == NumberOfKeys() )
-                                       return (--pos, false);
+                                       { --pos; return false; }
                                else
                                        return false;
                else //nkol < nkor )
@@ -265,7 +265,7 @@ bool CBTreePage<Trait>::Redistribute1(int &pos)
                                RedistributeR2L(pos+1); // bring elements from right brother
                        else
                                if( pos == 0 )
-                                       return (++pos, false);
+                                       { ++pos; return false; }
                                else
                                        return false;
        }
