@@ -24,10 +24,6 @@ class BTree
 
 public:
        //typedef ObjectInfo iterator;
-       typedef typename BTNode::lpfnForEach2    lpfnForEach2;
-       typedef typename BTNode::lpfnForEach3    lpfnForEach3;
-       typedef typename BTNode::lpfnFirstThat2  lpfnFirstThat2;
-       typedef typename BTNode::lpfnFirstThat3  lpfnFirstThat3;
        typedef typename BTNode::ObjectInfo      ObjectInfo;
 
 public:
@@ -44,10 +40,10 @@ public:
        long            GetOrder() { return m_Order;     }
 
        void            Print (ostream &os);
-       void            ForEach( lpfnForEach2 lpfn, void *pExtra1 );
-       void            ForEach( lpfnForEach3 lpfn, void *pExtra1, void *pExtra2);
-       ObjectInfo*     FirstThat( lpfnFirstThat2 lpfn, void *pExtra1 );
-       ObjectInfo*     FirstThat( lpfnFirstThat3 lpfn, void *pExtra1, void *pExtra2);
+       template <typename Func, typename... Args>
+       void ForEach(Func func, Args&&... args) { m_Root.ForEach(func, 0, forward<Args>(args)...); }
+       template <typename Func, typename... Args>
+       ObjectInfo* FirstThat(Func func, Args&&... args) { return m_Root.FirstThat(func, 0, forward<Args>(args)...); }
        //typedef               ObjectInfo iterator;
 
 protected:
@@ -111,32 +107,6 @@ typename BTree<Trait>::ObjIDType BTree<Trait>::Search (const keyType key)
        return ObjID;
 }
 
-
-template <typename Trait>
-void BTree<Trait>::ForEach(lpfnForEach2 lpfn, void *pExtra1)
-{
-       m_Root.ForEach(lpfn, 0, pExtra1);
-}
-
-template <typename Trait>
-void BTree<Trait>::ForEach(lpfnForEach3 lpfn, void *pExtra1, void *pExtra2)
-{
-       m_Root.ForEach(lpfn, 0, pExtra1, pExtra2);
-}
-
-template <typename Trait>
-typename BTree<Trait>::ObjectInfo *
-BTree<Trait>::FirstThat(lpfnFirstThat2 lpfn, void *pExtra1)
-{
-       return m_Root.FirstThat(lpfn, 0, pExtra1);
-}
-
-template <typename Trait>
-typename BTree<Trait>::ObjectInfo *
-BTree<Trait>::FirstThat(lpfnFirstThat3 lpfn, void *pExtra1, void *pExtra2)
-{
-       return m_Root.FirstThat(lpfn, 0, pExtra1, pExtra2);
-}
 
 template <typename Trait>
 void BTree<Trait>::Print(ostream &os){
