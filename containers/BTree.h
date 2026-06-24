@@ -8,11 +8,13 @@
 
 #define DEFAULT_BTREE_ORDER 3
 
-template <typename keyType, typename ObjIDType = long>
-class BTree 
+template <typename Trait>
+class BTree
 // this is the full version of the BTree
 {
-       typedef CBTreePage <keyType, ObjIDType> BTNode;// useful shorthand
+       using keyType   = typename Trait::keyType;
+       using ObjIDType = typename Trait::ObjIDType;
+       typedef CBTreePage <Trait> BTNode;// useful shorthand
        /*struct ObjectInfo
        {
                keyType first;
@@ -57,8 +59,8 @@ protected:
 };
 
 const int MaxHeight = 5;
-template <typename keyType, typename ObjIDType>
-BTree<keyType, ObjIDType>::BTree(int order, bool unique)
+template <typename Trait>
+BTree<Trait>::BTree(int order, bool unique)
                                : m_Unique(unique),
                                  m_Order(order),
                                  m_Root(2 * order  + 1, unique),
@@ -68,13 +70,13 @@ BTree<keyType, ObjIDType>::BTree(int order, bool unique)
        m_Height = 1;
 }
 
-template <typename keyType, typename ObjIDType>
-BTree<keyType, ObjIDType>::~BTree()
+template <typename Trait>
+BTree<Trait>::~BTree()
 {
 }
 
-template <typename keyType, typename ObjIDType>
-bool BTree<keyType, ObjIDType>::Insert(const keyType key, const int ObjID)
+template <typename Trait>
+bool BTree<Trait>::Insert(const keyType key, const int ObjID)
 {
        bt_ErrorCode error = m_Root.Insert(key, ObjID);
        if( error == bt_duplicate )
@@ -88,8 +90,8 @@ bool BTree<keyType, ObjIDType>::Insert(const keyType key, const int ObjID)
        return true;
 }
 
-template <typename keyType, typename ObjIDType>
-bool BTree<keyType, ObjIDType>::Remove (const keyType key, const int ObjID)
+template <typename Trait>
+bool BTree<Trait>::Remove (const keyType key, const int ObjID)
 {
        bt_ErrorCode error = m_Root.Remove(key, ObjID);
        if( error == bt_duplicate || error == bt_nofound )
@@ -101,8 +103,8 @@ bool BTree<keyType, ObjIDType>::Remove (const keyType key, const int ObjID)
        return true;
 }
 
-template <typename keyType, typename ObjIDType>
-ObjIDType BTree<keyType, ObjIDType>::Search (const keyType key)
+template <typename Trait>
+typename BTree<Trait>::ObjIDType BTree<Trait>::Search (const keyType key)
 {
        ObjIDType ObjID = -1;
        m_Root.Search(key, ObjID);
@@ -110,34 +112,34 @@ ObjIDType BTree<keyType, ObjIDType>::Search (const keyType key)
 }
 
 
-template <typename keyType, typename ObjIDType>
-void BTree<keyType, ObjIDType>::ForEach(lpfnForEach2 lpfn, void *pExtra1)
+template <typename Trait>
+void BTree<Trait>::ForEach(lpfnForEach2 lpfn, void *pExtra1)
 {
        m_Root.ForEach(lpfn, 0, pExtra1);
 }
 
-template <typename keyType, typename ObjIDType>
-void BTree<keyType, ObjIDType>::ForEach(lpfnForEach3 lpfn, void *pExtra1, void *pExtra2)
+template <typename Trait>
+void BTree<Trait>::ForEach(lpfnForEach3 lpfn, void *pExtra1, void *pExtra2)
 {
        m_Root.ForEach(lpfn, 0, pExtra1, pExtra2);
 }
 
-template <typename keyType, typename ObjIDType>
-typename BTree<keyType, ObjIDType>::ObjectInfo *
-BTree<keyType, ObjIDType>::FirstThat(lpfnFirstThat2 lpfn, void *pExtra1)
+template <typename Trait>
+typename BTree<Trait>::ObjectInfo *
+BTree<Trait>::FirstThat(lpfnFirstThat2 lpfn, void *pExtra1)
 {
        return m_Root.FirstThat(lpfn, 0, pExtra1);
 }
 
-template <typename keyType, typename ObjIDType>
-typename BTree<keyType, ObjIDType>::ObjectInfo *
-BTree<keyType, ObjIDType>::FirstThat(lpfnFirstThat3 lpfn, void *pExtra1, void *pExtra2)
+template <typename Trait>
+typename BTree<Trait>::ObjectInfo *
+BTree<Trait>::FirstThat(lpfnFirstThat3 lpfn, void *pExtra1, void *pExtra2)
 {
        return m_Root.FirstThat(lpfn, 0, pExtra1, pExtra2);
 }
 
-template <typename keyType, typename ObjIDType>
-void BTree<keyType, ObjIDType>::Print(ostream &os){
+template <typename Trait>
+void BTree<Trait>::Print(ostream &os){
        m_Root.Print(os);
 }
 
