@@ -20,14 +20,6 @@ using namespace std;
 #include "traits.h"
 enum bt_ErrorCode {bt_ok, bt_overflow, bt_underflow, bt_duplicate, bt_nofound, bt_rootmerged};
 
-/*template <typename keyType>
-bool operator>=(const _ObjectInfo<keyType>& object1, const _ObjectInfo<keyType>& object2)
-{ return object1.key >= object2.key;    }
-
-template <typename keyType>
-bool operator<=(const _ObjectInfo<keyType>& object1, const _ObjectInfo<keyType>& object2)
-{ return object1.key <= object2.key;    }*/
-
 template <typename Trait>
 struct tagObjectInfo
 {
@@ -533,19 +525,6 @@ flag CBTreePage<Trait>::Search(const keyType &key, Ref &ObjID)
                        return m_SubPages[pos]->Search(key, ObjID);
        return false;
 }
-
-/*template <typename Trait>
-void CBTreePage<Trait>::ForEachReverse(lpfnForEach2 lpfn, int level, void *pExtra1)
-{
-       if( m_SubPages[m_KeyCount] )
-               m_SubPages[m_KeyCount]->ForEach(lpfn, level+1, pExtra1);
-       for( int i = m_KeyCount-1 ; i >= 0  ; i--)
-       {
-               lpfn(m_Keys[i], level, pExtra1);
-               if( m_SubPages[i] )
-                       m_SubPages[i]->ForEach(lpfn, level+1, pExtra1);
-       }
-}*/
 
 template <typename Trait>
 bt_ErrorCode CBTreePage<Trait>::Remove(const keyType &key, const ObjIDType ObjID)

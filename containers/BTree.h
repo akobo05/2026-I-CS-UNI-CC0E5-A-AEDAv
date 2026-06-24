@@ -15,12 +15,6 @@ class BTree
        using keyType   = typename Trait::keyType;
        using ObjIDType = typename Trait::ObjIDType;
        typedef CBTreePage <Trait> BTNode;// useful shorthand
-       /*struct ObjectInfo
-       {
-               keyType first;
-               long    second;
-               ObjectInfo *&operator->() { return this; }
-       };*/
 
 public:
        //typedef ObjectInfo iterator;
