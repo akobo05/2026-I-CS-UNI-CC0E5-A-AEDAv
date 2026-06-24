@@ -613,7 +613,7 @@ bt_ErrorCode CBTreePage<Trait>::Merge(int pos)
        MovePage(pChild2, tmpKeys, tmpSubPages);
        tmpKeys    .push_back(m_Keys[ pos ]);
        MovePage(pChild3, tmpKeys, tmpSubPages);
-       pChild3->Destroy();;
+       pChild3->Destroy();
 
        // Move 1/2 elements to pChild1
        int nKeys = pChild1->GetFreeCells();
