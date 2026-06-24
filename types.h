@@ -16,4 +16,6 @@ using Ref = long;
 
 using TypeBTree = char;
 
+using flag = bool;
+
 #endif // __TYPES_H__

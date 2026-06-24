@@ -11,15 +11,15 @@ const TypeBTree * keys1 = "D1XJ2xTg8zKL9AhijOPQcEowRSp0NbW567BUfCqrs4FdtYZakHIuv
 
 const T1 BTreeSize = 3;
 
-void ImprimirClave(tagObjectInfo< AscBTreeTrait<TypeBTree> >& info, int nivel) { cout << info.key << " "; }
-bool EsVocal(tagObjectInfo< AscBTreeTrait<TypeBTree> >& info, int nivel) {
+void ImprimirClave(tagObjectInfo< AscBTreeTrait<TypeBTree> >& info, T1 nivel) { cout << info.key << " "; }
+flag EsVocal(tagObjectInfo< AscBTreeTrait<TypeBTree> >& info, T1 nivel) {
     TypeBTree k = info.key;
     return (k=='A'||k=='E'||k=='I'||k=='O'||k=='U'||k=='a'||k=='e'||k=='i'||k=='o'||k=='u');
 }
 
 void DemoBTree()
 {
-       int result, i;
+       T1 result, i;
        BTree< AscBTreeTrait<TypeBTree> > bt (BTreeSize);
        for (i = 0; keys1[i]; i++)
        {
