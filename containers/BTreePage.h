@@ -67,7 +67,7 @@ class CBTreePage
        void            Print  (ostream &os);
        template <typename Func, typename... Args>
        void ForEach(Func func, T1 level, Args&&... args) {
-           for (T1 i = 0; i < m_KeyCount; i++) {
+           for (size_t i = 0; i < m_KeyCount; i++) {
                if (m_SubPages[i]) m_SubPages[i]->ForEach(func, level + 1, forward<Args>(args)...);
                func(m_Keys[i], level, forward<Args>(args)...);
            }
@@ -75,7 +75,7 @@ class CBTreePage
        }
        template <typename Func, typename... Args>
        ObjectInfo* FirstThat(Func func, T1 level, Args&&... args) {
-           for (T1 i = 0; i < m_KeyCount; i++) {
+           for (size_t i = 0; i < m_KeyCount; i++) {
                if (m_SubPages[i]) { ObjectInfo* r = m_SubPages[i]->FirstThat(func, level + 1, forward<Args>(args)...); if (r) return r; }
                if (func(m_Keys[i], level, forward<Args>(args)...)) return &m_Keys[i];
            }
@@ -84,52 +84,52 @@ class CBTreePage
        }
 
 protected:
-       T1   m_MinKeys; // minimum number of keys in a node
-       T1   m_MaxKeys, // maximum number of keys in a node
+       size_t   m_MinKeys; // minimum number of keys in a node
+       size_t   m_MaxKeys, // maximum number of keys in a node
                 m_MaxKeysForChilds; // just to distinguish the root
        flag m_Unique;
        flag m_isRoot;
        vector<ObjectInfo> m_Keys;
        vector<BTPage *>   m_SubPages;
-       T1   m_KeyCount;
+       size_t   m_KeyCount;
        void  Create();
        void  Reset ();
        void  Destroy () {   Reset(); delete this;}
        void  clear ();
 
-       flag  Redistribute1   (T1 &pos);
-       flag  Redistribute2   (T1 pos);
-       void  RedistributeR2L (T1 pos);
-       void  RedistributeL2R (T1 pos);
+       flag  Redistribute1   (size_t &pos);
+       flag  Redistribute2   (size_t pos);
+       void  RedistributeR2L (size_t pos);
+       void  RedistributeL2R (size_t pos);
 
-       flag    TreatUnderflow  (T1 &pos)
+       flag    TreatUnderflow  (size_t &pos)
        {       return Redistribute1(pos) || Redistribute2(pos);}
 
-       bt_ErrorCode    Merge  (T1 pos);
+       bt_ErrorCode    Merge  (size_t pos);
        bt_ErrorCode    MergeRoot ();
-       void  SplitChild (T1 pos);
+       void  SplitChild (size_t pos);
 
        ObjectInfo &GetFirstObjectInfo();
 
        flag Overflow()  { return m_KeyCount > m_MaxKeys; }
        flag Underflow() { return m_KeyCount < MinNumberOfKeys(); }
        flag IsFull()    { return m_KeyCount >= m_MaxKeys; }
-       T1   MinNumberOfKeys()  { return 2*m_MaxKeys/3.0; }
-       T1   GetFreeCells()  { return m_MaxKeys - m_KeyCount; }
-       T1&  NumberOfKeys()  { return m_KeyCount; }
-       T1   GetNumberOfKeys()  { return m_KeyCount; }
+       size_t   MinNumberOfKeys()  { return 2*m_MaxKeys/3.0; }
+       size_t   GetFreeCells()  { return m_MaxKeys - m_KeyCount; }
+       size_t&  NumberOfKeys()  { return m_KeyCount; }
+       size_t   GetNumberOfKeys()  { return m_KeyCount; }
        flag IsRoot()  { return m_MaxKeysForChilds != m_MaxKeys; }
        void SetMaxKeysForChilds(T1 orderforchilds)
        {
                m_MaxKeysForChilds = orderforchilds;
        }
 
-       T1 GetFreeCellsOnLeft(T1 pos);
-       T1 GetFreeCellsOnRight(T1 pos);
+       size_t GetFreeCellsOnLeft(size_t pos);
+       size_t GetFreeCellsOnRight(size_t pos);
 
 private:
        Comp m_comp{};
-       T1 binary_search(T1 first, T1 last, const keyType &object);
+       size_t binary_search(size_t first, size_t last, const keyType &object);
        flag SplitRoot();
        void SplitPageInto3(vector<ObjectInfo>   & tmpKeys,
                                                vector<BTPage *>  & SubPages,
@@ -145,13 +145,13 @@ private:
 // cual es la posicion donde deberia estar
 // Ahora es miembro de CBTreePage y compara con el comparador del Trait (m_comp)
 template <typename Trait>
-T1 CBTreePage<Trait>::binary_search(T1 first, T1 last, const keyType &object)
+size_t CBTreePage<Trait>::binary_search(size_t first, size_t last, const keyType &object)
 {
        if( first >= last )
                return first;
        while( first < last )
        {
-               T1 mid = (first+last)/2;
+               size_t mid = (first+last)/2;
                keyType midKey = (keyType)m_Keys[mid];
                // igualdad: ni object antes que midKey ni midKey antes que object
                if( !m_comp(object, midKey) && !m_comp(midKey, object) )
@@ -170,20 +170,20 @@ T1 CBTreePage<Trait>::binary_search(T1 first, T1 last, const keyType &object)
 }
 
 template <typename Container, typename ObjType>
-void insert_at(Container& container, const ObjType &object, T1 pos)
+void insert_at(Container& container, const ObjType &object, size_t pos)
 {
-       T1 size = container.size();
-       for(T1 i = size-2 ; i >= pos ; i--)
-               container[i+1] = container[i];
+       size_t size = container.size();
+       for(size_t i = size-1 ; i > pos ; i--)
+               container[i] = container[i-1];
        container[pos] =  object;
 
 }
 
 template <typename Container>
-void remove(Container& container, T1 pos)
+void remove(Container& container, size_t pos)
 {
-       T1 size = container.size();
-       for(T1 i = pos+1 ; i < size ; i++)
+       size_t size = container.size();
+       for(size_t i = pos+1 ; i < size ; i++)
                container[i-1] = container[i];
 }
 
@@ -204,7 +204,7 @@ CBTreePage<Trait>::~CBTreePage()
 template <typename Trait>
 bt_ErrorCode CBTreePage<Trait>::Insert(const keyType& key, const ObjIDType ObjID)
 {
-       T1 pos = binary_search(0, m_KeyCount, key);
+       size_t pos = binary_search(0, m_KeyCount, key);
        bt_ErrorCode error = bt_ok;
 
        if( pos < m_KeyCount && (keyType)m_Keys[pos] == key && m_Unique)
@@ -240,11 +240,11 @@ bt_ErrorCode CBTreePage<Trait>::Insert(const keyType& key, const ObjIDType ObjID
 }
 
 template <typename Trait>
-flag CBTreePage<Trait>::Redistribute1(T1 &pos)
+flag CBTreePage<Trait>::Redistribute1(size_t &pos)
 {
        if( m_SubPages[pos]->Underflow() )
        {       // nkol = Number of keys on left brother, nkor = Number of keys on right brother
-               T1 nkol = 0,
+               size_t nkol = 0,
                    nkor = 0;
                // is this the first element or there are more elements on right brother
                if( pos > 0 )
@@ -271,7 +271,7 @@ flag CBTreePage<Trait>::Redistribute1(T1 &pos)
        }
        else // it is due to overflow
        {
-               T1 fcol = GetFreeCellsOnLeft(pos),   // Free Cells On Left
+               size_t fcol = GetFreeCellsOnLeft(pos),   // Free Cells On Left
                    fcor = GetFreeCellsOnRight(pos);  // Free Cells On Right
 
                if( !fcol && !fcor && m_SubPages[pos]->IsFull() )
@@ -289,7 +289,7 @@ flag CBTreePage<Trait>::Redistribute1(T1 &pos)
 // it considers two brothers m_SubPages[pos-1] && m_SubPages[pos+1]
 // if it fails the only way is merge !
 template <typename Trait>
-flag CBTreePage<Trait>::Redistribute2(T1 pos)
+flag CBTreePage<Trait>::Redistribute2(size_t pos)
 {
        assert( pos > 0 && pos < NumberOfKeys()  );
        assert( m_SubPages[pos-1] != 0 && m_SubPages[pos] != 0 && m_SubPages[pos+1] != 0 );
@@ -323,7 +323,7 @@ flag CBTreePage<Trait>::Redistribute2(T1 pos)
 }
 
 template <typename Trait>
-void CBTreePage<Trait>::RedistributeR2L(T1 pos)
+void CBTreePage<Trait>::RedistributeR2L(size_t pos)
 {
        BTPage  *pSource = m_SubPages[ pos ],
                        *pTarget = m_SubPages[pos-1];
@@ -347,7 +347,7 @@ void CBTreePage<Trait>::RedistributeR2L(T1 pos)
 }
 
 template <typename Trait>
-void CBTreePage<Trait>::RedistributeL2R(T1 pos)
+void CBTreePage<Trait>::RedistributeL2R(size_t pos)
 {
        BTPage  *pSource = m_SubPages[pos],
                        *pTarget = m_SubPages[pos+1];
@@ -370,7 +370,7 @@ void CBTreePage<Trait>::RedistributeL2R(T1 pos)
 }
 
 template <typename Trait>
-void CBTreePage<Trait>::SplitChild(T1 pos)
+void CBTreePage<Trait>::SplitChild(size_t pos)
 {
        // FIRST: deciding the second page to split
        BTPage  *pChild1 = 0, *pChild2 = 0;
@@ -387,7 +387,7 @@ void CBTreePage<Trait>::SplitChild(T1 pos)
                        pChild2 = m_SubPages[pos+1];
                }
 
-       T1 nKeys = pChild1->GetNumberOfKeys() + pChild2->GetNumberOfKeys() + 1;
+       size_t nKeys = pChild1->GetNumberOfKeys() + pChild2->GetNumberOfKeys() + 1;
 
        // SECOND: copy both pages to a temporal one
        // Create two tmp vector
@@ -438,8 +438,8 @@ void CBTreePage<Trait>::SplitPageInto3(vector<ObjectInfo>& tmpKeys,
        // Split tmpKeys page into 3 pages
        // copy 1/3 elements to the first child
        pChild1->clear();
-       T1 nKeys = (tmpKeys.size()-2)/3;
-       T1 i = 0;
+       size_t nKeys = (tmpKeys.size()-2)/3;
+       size_t i = 0;
        for( ; i < nKeys; i++ )
        {
                pChild1->m_Keys    [i] = tmpKeys    [i];
@@ -456,7 +456,7 @@ void CBTreePage<Trait>::SplitPageInto3(vector<ObjectInfo>& tmpKeys,
        pChild2->clear();
        // copy 1/3 to the second child
        nKeys += (tmpKeys.size()-2)/3 + 1;
-       T1 j = 0;
+       size_t j = 0;
        for(; i < nKeys; i++, j++ )
        {
                pChild2->m_Keys    [j] = tmpKeys    [i];
@@ -507,7 +507,7 @@ flag CBTreePage<Trait>::SplitRoot()
 template <typename Trait>
 flag CBTreePage<Trait>::Search(const keyType &key, Ref &ObjID)
 {
-       T1 pos = binary_search(0, m_KeyCount, key);
+       size_t pos = binary_search(0, m_KeyCount, key);
        if( pos >= m_KeyCount ){
                if( m_SubPages[pos] )
                        return m_SubPages[pos]->Search(key, ObjID);
@@ -543,7 +543,7 @@ template <typename Trait>
 bt_ErrorCode CBTreePage<Trait>::Remove(const keyType &key, const ObjIDType ObjID)
 {
        bt_ErrorCode error = bt_ok;
-       T1 pos = binary_search(0, m_KeyCount, key);
+       size_t pos = binary_search(0, m_KeyCount, key);
        if( pos < NumberOfKeys() && key == m_Keys[pos].key /*&& m_Keys[pos].m_ObjID == ObjID*/) // We found it !
        {
                // This is a leave: First
@@ -593,7 +593,7 @@ bt_ErrorCode CBTreePage<Trait>::Remove(const keyType &key, const ObjIDType ObjID
 
 
 template <typename Trait>
-bt_ErrorCode CBTreePage<Trait>::Merge(T1 pos)
+bt_ErrorCode CBTreePage<Trait>::Merge(size_t pos)
 {
        assert( m_SubPages[pos-1]->NumberOfKeys() +
                 m_SubPages[ pos ]->NumberOfKeys() +
@@ -616,8 +616,8 @@ bt_ErrorCode CBTreePage<Trait>::Merge(T1 pos)
        pChild3->Destroy();
 
        // Move 1/2 elements to pChild1
-       T1 nKeys = pChild1->GetFreeCells();
-       T1 i = 0;
+       size_t nKeys = pChild1->GetFreeCells();
+       size_t i = 0;
        for( ; i < nKeys ; i++ )
        {
                pChild1->m_Keys    [i] = tmpKeys    [i];
@@ -634,7 +634,7 @@ bt_ErrorCode CBTreePage<Trait>::Merge(T1 pos)
        NumberOfKeys()--;
 
        nKeys = pChild2->GetFreeCells();
-       T1 j = ++i;
+       size_t j = ++i;
        for(i = 0 ; i < nKeys ; i++, j++ )
        {
                pChild2->m_Keys    [i] = tmpKeys    [j];
@@ -652,14 +652,14 @@ bt_ErrorCode CBTreePage<Trait>::Merge(T1 pos)
 template <typename Trait>
 bt_ErrorCode CBTreePage<Trait>::MergeRoot()
 {
-       T1 pos = 1;
+       size_t pos = 1;
        assert( m_SubPages[pos-1]->NumberOfKeys() +
                        m_SubPages[ pos ]->NumberOfKeys() +
                        m_SubPages[pos+1]->NumberOfKeys() ==
                        3*m_SubPages[ pos ]->MinNumberOfKeys() - 1);
 
        BTPage  *pChild1 = m_SubPages[pos-1], *pChild2 = m_SubPages[ pos ], *pChild3 = m_SubPages[pos+1];
-       T1 nKeys = pChild1->NumberOfKeys() + pChild2->NumberOfKeys() + pChild3->NumberOfKeys() + 2;
+       size_t nKeys = pChild1->NumberOfKeys() + pChild2->NumberOfKeys() + pChild3->NumberOfKeys() + 2;
 
        // FIRST: Put all the elements into a vector
        vector<ObjectInfo> tmpKeys;
@@ -673,7 +673,7 @@ bt_ErrorCode CBTreePage<Trait>::MergeRoot()
        MovePage(pChild3, tmpKeys, tmpSubPages);
 
        clear();
-       T1 i = 0;
+       size_t i = 0;
        for( ; i < nKeys ; i++ ){
                m_Keys    [i] = tmpKeys    [i];
                m_SubPages[i] = tmpSubPages[i];
@@ -728,7 +728,7 @@ void CBTreePage<Trait>::Create()
 template <typename Trait>
 void CBTreePage<Trait>::Reset()
 {
-       for( T1 i = 0 ; i < m_KeyCount ; i++ )
+       for( size_t i = 0 ; i < m_KeyCount ; i++ )
                delete m_SubPages[i];
        clear();
 }
@@ -750,8 +750,8 @@ CBTreePage<Trait> * CreateBTreeNode (T1 maxKeys, T1 unique)
 template <typename Trait>
 void CBTreePage<Trait>::MovePage(BTPage *pChildPage, vector<ObjectInfo> &tmpKeys,vector<BTPage *> &tmpSubPages)
 {
-       T1 nKeys = pChildPage->GetNumberOfKeys();
-       T1 i = 0;
+       size_t nKeys = pChildPage->GetNumberOfKeys();
+       size_t i = 0;
        for( ; i < nKeys; i++ )
        {
                tmpKeys    .push_back(pChildPage->m_Keys[i]);
@@ -762,7 +762,7 @@ void CBTreePage<Trait>::MovePage(BTPage *pChildPage, vector<ObjectInfo> &tmpKeys
 }
 
 template <typename Trait>
-T1 CBTreePage<Trait>::GetFreeCellsOnLeft(T1 pos)
+size_t CBTreePage<Trait>::GetFreeCellsOnLeft(size_t pos)
 {
        if( pos > 0 )                                   // there is some page on left ?
                return m_SubPages[pos-1]->GetFreeCells();
@@ -770,7 +770,7 @@ T1 CBTreePage<Trait>::GetFreeCellsOnLeft(T1 pos)
 }
 
 template <typename Trait>
-T1 CBTreePage<Trait>::GetFreeCellsOnRight(T1 pos)
+size_t CBTreePage<Trait>::GetFreeCellsOnRight(size_t pos)
 {
        if( pos < GetNumberOfKeys() )   // there is some page on right ?
                return m_SubPages[pos+1]->GetFreeCells();
