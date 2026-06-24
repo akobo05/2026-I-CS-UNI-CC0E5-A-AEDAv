@@ -66,22 +66,9 @@ class CBTreePage
        flag            Search (const keyType &key, Ref &ObjID);
        void            Print  (ostream &os);
        template <typename Func, typename... Args>
-       void ForEach(Func func, T1 level, Args&&... args) {
-           for (size_t i = 0; i < m_KeyCount; i++) {
-               if (m_SubPages[i]) m_SubPages[i]->ForEach(func, level + 1, forward<Args>(args)...);
-               func(m_Keys[i], level, forward<Args>(args)...);
-           }
-           if (m_SubPages[m_KeyCount]) m_SubPages[m_KeyCount]->ForEach(func, level + 1, forward<Args>(args)...);
-       }
+       void ForEach(Func func, T1 level, Args&&... args);
        template <typename Func, typename... Args>
-       ObjectInfo* FirstThat(Func func, T1 level, Args&&... args) {
-           for (size_t i = 0; i < m_KeyCount; i++) {
-               if (m_SubPages[i]) { ObjectInfo* r = m_SubPages[i]->FirstThat(func, level + 1, forward<Args>(args)...); if (r) return r; }
-               if (func(m_Keys[i], level, forward<Args>(args)...)) return &m_Keys[i];
-           }
-           if (m_SubPages[m_KeyCount]) return m_SubPages[m_KeyCount]->FirstThat(func, level + 1, forward<Args>(args)...);
-           return 0;
-       }
+       ObjectInfo* FirstThat(Func func, T1 level, Args&&... args);
 
 protected:
        size_t   m_MinKeys; // minimum number of keys in a node
@@ -167,6 +154,27 @@ size_t CBTreePage<Trait>::binary_search(size_t first, size_t last, const keyType
        if( !m_comp(firstKey, object) )
                return first;
        return last;
+}
+
+template <typename Trait>
+template <typename Func, typename... Args>
+void CBTreePage<Trait>::ForEach(Func func, T1 level, Args&&... args) {
+    for (size_t i = 0; i < m_KeyCount; i++) {
+        if (m_SubPages[i]) m_SubPages[i]->ForEach(func, level + 1, forward<Args>(args)...);
+        func(m_Keys[i], level, forward<Args>(args)...);
+    }
+    if (m_SubPages[m_KeyCount]) m_SubPages[m_KeyCount]->ForEach(func, level + 1, forward<Args>(args)...);
+}
+
+template <typename Trait>
+template <typename Func, typename... Args>
+typename CBTreePage<Trait>::ObjectInfo* CBTreePage<Trait>::FirstThat(Func func, T1 level, Args&&... args) {
+    for (size_t i = 0; i < m_KeyCount; i++) {
+        if (m_SubPages[i]) { ObjectInfo* r = m_SubPages[i]->FirstThat(func, level + 1, forward<Args>(args)...); if (r) return r; }
+        if (func(m_Keys[i], level, forward<Args>(args)...)) return &m_Keys[i];
+    }
+    if (m_SubPages[m_KeyCount]) return m_SubPages[m_KeyCount]->FirstThat(func, level + 1, forward<Args>(args)...);
+    return 0;
 }
 
 template <typename Container, typename ObjType>
