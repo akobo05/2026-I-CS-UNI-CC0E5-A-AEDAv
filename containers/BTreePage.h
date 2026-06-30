@@ -107,6 +107,9 @@ protected:
 
 private:
        Comp m_comp{};
+       // comparaciones de clave via el comparador del Trait (no ==, < crudos)
+       flag KeyEq(const keyType &a, const keyType &b) { return !m_comp(a,b) && !m_comp(b,a); }
+       flag KeyLt(const keyType &a, const keyType &b) { return m_comp(a,b); }
        size_t binary_search(size_t first, size_t last, const keyType &object);
        flag SplitRoot();
        void SplitPageInto3(vector<ObjectInfo>   & tmpKeys,
@@ -206,7 +209,7 @@ bt_ErrorCode CBTreePage<Trait>::Insert(const keyType& key, const ObjIDType ObjID
        size_t pos = binary_search(0, m_KeyCount, key);
        bt_ErrorCode error = bt_ok;
 
-       if( pos < m_KeyCount && (keyType)m_Keys[pos] == key && m_Unique)
+       if( pos < m_KeyCount && KeyEq((keyType)m_Keys[pos], key) && m_Unique)
                return bt_duplicate; // this key is duplicate
 
        if( !m_SubPages[pos] ) // this is a leave
@@ -513,13 +516,13 @@ flag CBTreePage<Trait>::Search(const keyType &key, Ref &ObjID)
                else
                        return false;
        }
-       if( key == m_Keys[pos].key )
+       if( KeyEq(key, m_Keys[pos].key) )
        {
                ObjID = m_Keys[pos].ObjID;
                m_Keys[pos].UseCounter++;
                return true;
        }
-       if( key < m_Keys[pos].key )
+       if( KeyLt(key, m_Keys[pos].key) )
                if( m_SubPages[pos] )
                        return m_SubPages[pos]->Search(key, ObjID);
        return false;
@@ -530,7 +533,7 @@ bt_ErrorCode CBTreePage<Trait>::Remove(const keyType &key, const ObjIDType ObjID
 {
        bt_ErrorCode error = bt_ok;
        size_t pos = binary_search(0, m_KeyCount, key);
-       if( pos < NumberOfKeys() && key == m_Keys[pos].key /*&& m_Keys[pos].m_ObjID == ObjID*/) // We found it !
+       if( pos < NumberOfKeys() && KeyEq(key, m_Keys[pos].key) /*&& m_Keys[pos].m_ObjID == ObjID*/) // We found it !
        {
                // This is a leave: First
                if( !m_SubPages[pos+1] )  // This is a leave ? FIRST CASE !
@@ -556,7 +559,7 @@ bt_ErrorCode CBTreePage<Trait>::Remove(const keyType &key, const ObjIDType ObjID
        }
        else if( pos == NumberOfKeys() ) // it is not here, go by the last branch
                error = m_SubPages[pos]->Remove(key, ObjID);
-       else if( key <= m_Keys[pos].key ){ // = is because identical keys are inserted on left (see Insert)
+       else if( !KeyLt(m_Keys[pos].key, key) ){ // key <= clave (via Comp); = porque claves iguales van a la izquierda (ver Insert)
                if( m_SubPages[pos] )
                        error = m_SubPages[pos]->Remove(key, ObjID);
                else
