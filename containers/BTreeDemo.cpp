@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string>
 #include <sstream>
+#include <thread>
+#include <vector>
 #include "../types.h"
 #include "BTree.h"
 #include "traits.h"
@@ -55,4 +57,20 @@ void DemoBTree()
        istringstream entrada("M E X I C O");
        entrada >> btIn;
        cout << btIn;
+
+       // Control concurrente: varios hilos insertan en paralelo (shared_mutex)
+       cout << "\nConcurrencia (4 hilos insertan en paralelo):\n";
+       BTree< AscBTreeTrait<TypeBTree> > btMT (BTreeSize);
+       {
+               T1 n = 0; while( keys1[n] ) n++;            // longitud de keys1
+               T1 nh = 4, chunk = (n + nh - 1) / nh;
+               vector<thread> hilos;
+               for( T1 h = 0; h < nh; h++ )
+                       hilos.emplace_back([&btMT, h, chunk, n]() {
+                               for( T1 i = h*chunk; i < (h+1)*chunk && i < n; i++ )
+                                       btMT.Insert(keys1[i], i);
+                       });
+               for( auto &t : hilos ) t.join();
+               cout << "  insertadas " << btMT.size() << " de " << n << " claves sin corrupcion\n";
+       }
 }

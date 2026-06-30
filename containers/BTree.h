@@ -4,6 +4,8 @@
 #define BTREE_H
 
 #include <iostream>
+#include <mutex>
+#include <shared_mutex>
 #include "BTreePage.h"
 
 #define DEFAULT_BTREE_ORDER 3
@@ -29,14 +31,14 @@ public:
        flag            Insert (const keyType key, const T1 ObjID);
        flag            Remove (const keyType key, const T1 ObjID);
        ObjIDType       Search (const keyType key);
-       Ref             size()  { return m_NumKeys; }
-       Ref             height() { return m_Height;      }
-       Ref             GetOrder() { return m_Order;     }
+       Ref             size()  { shared_lock<shared_mutex> lock(m_mtx); return m_NumKeys; }
+       Ref             height() { shared_lock<shared_mutex> lock(m_mtx); return m_Height; }
+       Ref             GetOrder() { shared_lock<shared_mutex> lock(m_mtx); return m_Order; }
 
        template <typename Func, typename... Args>
-       void ForEach(Func func, Args&&... args) { m_Root.ForEach(func, 0, forward<Args>(args)...); }
+       void ForEach(Func func, Args&&... args) { shared_lock<shared_mutex> lock(m_mtx); m_Root.ForEach(func, 0, forward<Args>(args)...); }
        template <typename Func, typename... Args>
-       ObjectInfo* FirstThat(Func func, Args&&... args) { return m_Root.FirstThat(func, 0, forward<Args>(args)...); }
+       ObjectInfo* FirstThat(Func func, Args&&... args) { shared_lock<shared_mutex> lock(m_mtx); return m_Root.FirstThat(func, 0, forward<Args>(args)...); }
        //typedef               ObjectInfo iterator;
 
 protected:
@@ -45,6 +47,7 @@ protected:
        T1              m_Order;   // order of tree
        Ref             m_NumKeys; // number of keys
        flag            m_Unique;  // Accept the elements only once ?
+       mutable shared_mutex m_mtx; // control concurrente (igual que vector/linkedlist)
 };
 
 const T1 MaxHeight = 5;
@@ -67,6 +70,7 @@ BTree<Trait>::~BTree()
 template <typename Trait>
 flag BTree<Trait>::Insert(const keyType key, const T1 ObjID)
 {
+       unique_lock<shared_mutex> lock(m_mtx);
        bt_ErrorCode error = m_Root.Insert(key, ObjID);
        if( error == bt_duplicate )
                return false;
@@ -82,6 +86,7 @@ flag BTree<Trait>::Insert(const keyType key, const T1 ObjID)
 template <typename Trait>
 flag BTree<Trait>::Remove (const keyType key, const T1 ObjID)
 {
+       unique_lock<shared_mutex> lock(m_mtx);
        bt_ErrorCode error = m_Root.Remove(key, ObjID);
        if( error == bt_duplicate || error == bt_nofound )
                return false;
@@ -95,6 +100,7 @@ flag BTree<Trait>::Remove (const keyType key, const T1 ObjID)
 template <typename Trait>
 typename BTree<Trait>::ObjIDType BTree<Trait>::Search (const keyType key)
 {
+       shared_lock<shared_mutex> lock(m_mtx);
        ObjIDType ObjID = -1;
        m_Root.Search(key, ObjID);
        return ObjID;
