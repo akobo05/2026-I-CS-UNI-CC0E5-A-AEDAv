@@ -2,6 +2,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string>
+#include <sstream>
 #include "../types.h"
 #include "BTree.h"
 #include "traits.h"
@@ -47,4 +48,11 @@ void DemoBTree()
        for (i = 0; keys1[i]; i++)
                btDesc.Insert(keys1[i], i*i);
        cout << btDesc;
+
+       // operator>> : construye un arbol leyendo claves de un stream
+       cout << "\noperator>> (lee 'M E X I C O'):\n";
+       BTree< AscBTreeTrait<TypeBTree> > btIn (BTreeSize);
+       istringstream entrada("M E X I C O");
+       entrada >> btIn;
+       cout << btIn;
 }

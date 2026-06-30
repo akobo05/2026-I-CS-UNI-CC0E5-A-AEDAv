@@ -114,6 +114,14 @@ ostream& operator<<(ostream &os, BTree<Trait> &bt)
        return os;
 }
 
-
+// operator>> : lee claves del stream y las inserta (ObjID = orden de insercion)
+template <typename Trait>
+istream& operator>>(istream &is, BTree<Trait> &bt)
+{
+       typename Trait::keyType key;
+       while( is >> key )
+               bt.Insert(key, bt.size());
+       return is;
+}
 
 #endif
