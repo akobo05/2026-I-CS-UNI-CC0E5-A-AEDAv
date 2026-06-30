@@ -56,7 +56,6 @@ class CBTreePage
        bt_ErrorCode    Insert (const keyType &key, const ObjIDType ObjID);
        bt_ErrorCode    Remove (const keyType &key, const ObjIDType ObjID);
        flag            Search (const keyType &key, Ref &ObjID);
-       void            Print  (ostream &os);
        template <typename Func, typename... Args>
        void ForEach(Func func, T1 level, Args&&... args);
        template <typename Func, typename... Args>
@@ -685,21 +684,7 @@ CBTreePage<Trait>::GetFirstObjectInfo()
        return m_Keys[0];
 }
 
-// Deben eliminarlo e imprimir con un ForEach
-template <typename Trait>
-void Print(tagObjectInfo<Trait> &info, T1 level, void *pExtra)
-{
-        ostream &os = *(ostream *)pExtra;
-        for( T1 i = 0; i < level ; i++)
-                os << "\t";
-        os << info.key << "->" << info.ObjID << "\n";
-}
-
-template <typename Trait>
-void CBTreePage<Trait>::Print(ostream & os)
-{
-       ForEach(&::Print<Trait>, 0, (void *)&os);
-}
+// Print helper (con void*) eliminado: ahora se imprime con operator<< vía ForEach
 
 template <typename Trait>
 void CBTreePage<Trait>::Create()

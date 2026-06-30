@@ -33,7 +33,6 @@ public:
        Ref             height() { return m_Height;      }
        Ref             GetOrder() { return m_Order;     }
 
-       void            Print (ostream &os);
        template <typename Func, typename... Args>
        void ForEach(Func func, Args&&... args) { m_Root.ForEach(func, 0, forward<Args>(args)...); }
        template <typename Func, typename... Args>
@@ -102,13 +101,18 @@ typename BTree<Trait>::ObjIDType BTree<Trait>::Search (const keyType key)
 }
 
 
+// operator<< : imprime el arbol via ForEach (reemplaza a Print)
 template <typename Trait>
-void BTree<Trait>::Print(ostream &os){
-       m_Root.Print(os);
+ostream& operator<<(ostream &os, BTree<Trait> &bt)
+{
+       bt.ForEach([&os](tagObjectInfo<Trait> &info, T1 level)
+       {
+               for( T1 i = 0; i < level; i++ )
+                       os << "\t";
+               os << info.key << "->" << info.ObjID << "\n";
+       });
+       return os;
 }
-
-
-
 
 
 

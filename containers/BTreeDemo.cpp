@@ -27,7 +27,7 @@ void DemoBTree()
                result = bt.Insert(keys1[i], i*i);
                //bt.Print(cout);
        }
-       bt.Print(cout);
+       cout << bt;
 
        cout << "\nForEach:\n";
        bt.ForEach(ImprimirClave);
@@ -46,5 +46,5 @@ void DemoBTree()
        BTree< DescBTreeTrait<TypeBTree> > btDesc (BTreeSize);
        for (i = 0; keys1[i]; i++)
                btDesc.Insert(keys1[i], i*i);
-       btDesc.Print(cout);
+       cout << btDesc;
 }
