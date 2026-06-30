@@ -15,6 +15,9 @@
 template <typename Trait>
 class BTree;
 
+template <typename Container, size_t D>
+class bt_inorder_iterator;
+
 
 using namespace std;
 #include "traits.h"
@@ -41,6 +44,7 @@ class CBTreePage
 // this is the in-memory version of the CBTreePage
 {
        friend class BTree<Trait>;
+       template <typename C, size_t D> friend class bt_inorder_iterator;
 
        using keyType   = typename Trait::keyType;
        using ObjIDType = typename Trait::ObjIDType;
@@ -56,10 +60,7 @@ class CBTreePage
        bt_ErrorCode    Insert (const keyType &key, const ObjIDType ObjID);
        bt_ErrorCode    Remove (const keyType &key, const ObjIDType ObjID);
        flag            Search (const keyType &key, Ref &ObjID);
-       template <typename Func, typename... Args>
-       void ForEach(Func func, T1 level, Args&&... args);
-       template <typename Func, typename... Args>
-       ObjectInfo* FirstThat(Func func, T1 level, Args&&... args);
+       // ForEach/FirstThat unificados en BTree con un solo bucle sobre el iterador
 
 protected:
        size_t   m_MinKeys; // minimum number of keys in a node
@@ -150,26 +151,6 @@ size_t CBTreePage<Trait>::binary_search(size_t first, size_t last, const keyType
        return last;
 }
 
-template <typename Trait>
-template <typename Func, typename... Args>
-void CBTreePage<Trait>::ForEach(Func func, T1 level, Args&&... args) {
-    for (size_t i = 0; i < m_KeyCount; i++) {
-        if (m_SubPages[i]) m_SubPages[i]->ForEach(func, level + 1, forward<Args>(args)...);
-        func(m_Keys[i], level, forward<Args>(args)...);
-    }
-    if (m_SubPages[m_KeyCount]) m_SubPages[m_KeyCount]->ForEach(func, level + 1, forward<Args>(args)...);
-}
-
-template <typename Trait>
-template <typename Func, typename... Args>
-typename CBTreePage<Trait>::ObjectInfo* CBTreePage<Trait>::FirstThat(Func func, T1 level, Args&&... args) {
-    for (size_t i = 0; i < m_KeyCount; i++) {
-        if (m_SubPages[i]) { ObjectInfo* r = m_SubPages[i]->FirstThat(func, level + 1, forward<Args>(args)...); if (r) return r; }
-        if (func(m_Keys[i], level, forward<Args>(args)...)) return &m_Keys[i];
-    }
-    if (m_SubPages[m_KeyCount]) return m_SubPages[m_KeyCount]->FirstThat(func, level + 1, forward<Args>(args)...);
-    return 0;
-}
 
 template <typename Container, typename ObjType>
 void insert_at(Container& container, const ObjType &object, size_t pos)

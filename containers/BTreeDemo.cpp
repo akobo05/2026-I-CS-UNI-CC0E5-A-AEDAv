@@ -44,6 +44,13 @@ void DemoBTree()
                        cout << "FirstThat (vocal): no encontrado" << endl;
        }
 
+       // Forward / Backward iterator (recorrido directo, in-order y su inverso)
+       cout << "Forward  iterator: ";
+       for( auto it = bt.begin();  it != bt.end();  ++it ) cout << (*it).key;
+       cout << "\nBackward iterator: ";
+       for( auto it = bt.rbegin(); it != bt.rend(); ++it ) cout << (*it).key;
+       cout << endl;
+
        // Variante descendente: el comparador viene del Trait (DescBTreeTrait)
        cout << "\nDescendente:\n";
        BTree< DescBTreeTrait<TypeBTree> > btDesc (BTreeSize);

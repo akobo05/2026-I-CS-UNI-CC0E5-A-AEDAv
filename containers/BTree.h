@@ -7,6 +7,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include "BTreePage.h"
+#include "bt_iterators.h"
 
 #define DEFAULT_BTREE_ORDER 3
 
@@ -35,11 +36,35 @@ public:
        Ref             height() { shared_lock<shared_mutex> lock(m_mtx); return m_Height; }
        Ref             GetOrder() { shared_lock<shared_mutex> lock(m_mtx); return m_Order; }
 
+       // tipos que el iterador (general_iterator) necesita del contenedor
+       using Page       = BTNode;
+       using Node       = BTNode;
+       using value_type = ObjectInfo;
+       using iterator         = bt_inorder_iterator<BTree<Trait>, 1>;   // forward (Comp)
+       using reverse_iterator = bt_inorder_iterator<BTree<Trait>, 0>;   // backward
+
+       iterator begin() { return iterator(this, &m_Root, false); }
+       iterator end()   { return iterator(this, &m_Root, true ); }
+       reverse_iterator rbegin() { return reverse_iterator(this, &m_Root, false); }
+       reverse_iterator rend()   { return reverse_iterator(this, &m_Root, true ); }
+
+       // Un SOLO bucle (Traverse) sirve a ForEach y FirstThat (unificados)
+       template <typename Pred>
+       ObjectInfo* Traverse(Pred pred) {
+               shared_lock<shared_mutex> lock(m_mtx);
+               for( auto it = begin(); it != end(); ++it )
+                       if( pred(*it, it.level()) )
+                               return &(*it);
+               return nullptr;
+       }
        template <typename Func, typename... Args>
-       void ForEach(Func func, Args&&... args) { shared_lock<shared_mutex> lock(m_mtx); m_Root.ForEach(func, 0, forward<Args>(args)...); }
+       void ForEach(Func func, Args&&... args) {
+               Traverse([&](ObjectInfo &o, T1 lvl) { func(o, lvl, forward<Args>(args)...); return false; });
+       }
        template <typename Func, typename... Args>
-       ObjectInfo* FirstThat(Func func, Args&&... args) { shared_lock<shared_mutex> lock(m_mtx); return m_Root.FirstThat(func, 0, forward<Args>(args)...); }
-       //typedef               ObjectInfo iterator;
+       ObjectInfo* FirstThat(Func func, Args&&... args) {
+               return Traverse([&](ObjectInfo &o, T1 lvl) { return (flag)func(o, lvl, forward<Args>(args)...); });
+       }
 
 protected:
        BTNode          m_Root;
