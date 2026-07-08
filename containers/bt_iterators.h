@@ -25,17 +25,17 @@ public:
        using Parent     = general_iterator<Container, MySelf>;
 
 protected:
-       vector<pair<Page *, long>> m_stack;   // (pagina, indice de la clave actual)
+       vector<pair<Page *, Ref>> m_stack;   // (pagina, indice de la clave actual)
 
        // el hijo que sigue a la clave actual segun la direccion
-       Page *NextChild(Page *p, long i) { return (D == 1) ? p->m_SubPages[i+1] : p->m_SubPages[i]; }
-       long  NextIndex(long i)          { return (D == 1) ? i+1 : i-1; }
-       flag  ValidIndex(Page *p, long j){ return j >= 0 && (size_t)j < p->m_KeyCount; }
+       Page *NextChild(Page *p, Ref i) { return (D == 1) ? p->m_SubPages[i+1] : p->m_SubPages[i]; }
+       Ref   NextIndex(Ref i)          { return (D == 1) ? i+1 : i-1; }
+       flag  ValidIndex(Page *p, Ref j){ return j >= 0 && (size_t)j < p->m_KeyCount; }
 
        // baja por el extremo inicial (izq si forward, der si backward)
        void Descend(Page *p) {
                while( p && p->m_KeyCount > 0 ) {
-                       long i = (D == 1) ? 0 : (long)p->m_KeyCount - 1;
+                       Ref i = (D == 1) ? 0 : (Ref)p->m_KeyCount - 1;
                        m_stack.push_back({p, i});
                        p = (D == 1) ? p->m_SubPages[0] : p->m_SubPages[p->m_KeyCount];
                }
@@ -52,7 +52,7 @@ public:
        MySelf operator++() {
                if( m_stack.empty() ) return *this;
                Page *page = m_stack.back().first;
-               long  i    = m_stack.back().second;
+               Ref   i    = m_stack.back().second;
                Page *child = NextChild(page, i);
                m_stack.back().second = NextIndex(i);     // este marco avanza una posicion
                if( child )
